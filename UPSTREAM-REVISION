@@ -1,0 +1,7 @@
+Repository: https://github.com/qzeleza/kvas
+Branch: main
+Resolved commit: cd582bb63784079e103ab57798c50f62c6169292
+Imported from the main branch tarball on 2026-11-03.
+
+The local branch codex/vless-kvas-safety is for analysis and changes. The
+installed router version is not assumed to be byte-identical to this source.

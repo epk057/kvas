@@ -22,6 +22,8 @@ grep -Fq 'RULE_PRIORITY=99' "$ROOT/opt/etc/ndm/ndm"
 grep -Fq 'Не передёргивать Proxy21 через RCI' "$ROOT/opt/bin/libs/vpn"
 grep -Fq 'повторный RCI-up VLESS запрещён' "$ROOT/opt/etc/ndm/iflayerchanged.d/100-kvas-vpn"
 grep -Fq 'повторный link_reboot VLESS запрещён' "$ROOT/opt/etc/ndm/ifstatechanged.d/100-kvas-vpn"
+grep -Fq 'повторный link_reboot VLESS запрещён' "$ROOT/opt/etc/ndm/iflayerchanged.d/kvas-ips-reset"
+grep -Fq 'RCI down/up Proxy21 запрещён' "$ROOT/opt/bin/main/check_vpn"
 grep -Fq 'Основной WAN default route отсутствует' "$ROOT/opt/etc/ndm/ndm"
 
 ipk=$("$ROOT/tools/build-ipk.sh" --compat-352 --output "$TMP")

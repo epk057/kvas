@@ -30,6 +30,11 @@ restart_ssr_connection(){
 }
 restart_vpn_connection(){
 
+		if is_vless_over_proxy_enabled; then
+			logger -t "КВАС" "Проверка VLESS: RCI down/up Proxy21 запрещён."
+			return 1
+		fi
+
         cli_request="localhost:79/rci/interface/${CLI_INTERFACE}"
         reset_logger
         curl -s -d '{"down":"true"}' "${cli_request}"

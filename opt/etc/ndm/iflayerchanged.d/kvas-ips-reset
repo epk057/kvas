@@ -42,8 +42,12 @@ if [ "${1}" = "hook" ]; then
 	if [ "${id}" = "$(inface_cli)" ]; then
 		case "${layer}-${level}" in
 			"ctrl-disabled" )
-				link_reboot &> /dev/null
-				logger -t "КВАС"  "Соединение ${id} прервано. Правила и таблицы очищены."
+				if is_vless_over_proxy_enabled; then
+					logger -t "КВАС" "Соединение ${id} прервано; повторный link_reboot VLESS запрещён."
+				else
+					link_reboot &> /dev/null
+					logger -t "КВАС"  "Соединение ${id} прервано. Правила и таблицы очищены."
+				fi
 			;;
 			"ctrl-running" )
 				cmd_vpn_iptable_reset &> /dev/null

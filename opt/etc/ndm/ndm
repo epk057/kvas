@@ -518,10 +518,21 @@ ip4__shadowsocks__create_chain() {
 	ip4__dnat_to_port__create_chain "${TABLE_DNAT_TO_PORT}" "${CHAIN_DNAT_TO_PORT}" "${local_port}"
 }
 
+ip4__main__has_default_route() {
+	/opt/sbin/ip route show table main 2>/dev/null | grep -q '^default[[:space:]]'
+}
+
 ip4__mark__create_chain() {
 	{
 		if ip4__chain__is_exist "${TABLE_MARK}" "${CHAIN_MARK}" ; then
 			return
+		fi
+
+		# Не включать маркировку, если Keenetic уже потерял основной WAN
+		# default route. Иначе KVAS закрепит аварийное состояние правилами.
+		if ! ip4__main__has_default_route; then
+			error "[${FUNCNAME}] Основной WAN default route отсутствует; маркировка не включается"
+			return 1
 		fi
 
 		# Не включать маркировку, пока таблица 1001 не подготовлена.

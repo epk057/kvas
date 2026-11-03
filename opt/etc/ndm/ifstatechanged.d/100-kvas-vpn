@@ -37,8 +37,12 @@ if [ "${1}" = "hook" ] && [ "${change}" = "link" ] ; then
 				logger -t "КВАС"  "Соединение ${id} прервано. Правила и таблицы очищены."
 			;;
 			"yes-up-up" )
-				link_reboot &> /dev/null
-				logger -t "КВАС"  "Соединение ${id} установлено. Правила и таблицы пересозданы."
+				if is_vless_over_proxy_enabled; then
+					logger -t "КВАС" "Соединение ${id} установлено; повторный link_reboot VLESS запрещён."
+				else
+					link_reboot &> /dev/null
+					logger -t "КВАС"  "Соединение ${id} установлено. Правила и таблицы пересозданы."
+				fi
 			;;
 		esac
 	fi

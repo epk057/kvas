@@ -29,11 +29,14 @@ if [ "${1}" = "hook" ] && echo "${id}" | grep -q "${cli_inface}"; then
 
 #		Запускаем обработку при отключении соединении
 		"ctrl-disabled" )
-			link_reboot "${cli_inface}" &> /dev/null
-			logger -t "КВАС"  "Соединение ${id} успешно завершено."
+			if is_vless_over_proxy_enabled; then
+				logger -t "КВАС" "Соединение ${id} завершено; повторный RCI-up VLESS запрещён."
+			else
+				link_reboot "${cli_inface}" &> /dev/null
+				logger -t "КВАС"  "Соединение ${id} успешно завершено."
+			fi
 		;;
 
 	esac
 
 fi
-

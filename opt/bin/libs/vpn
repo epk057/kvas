@@ -126,12 +126,12 @@ reset_all_connection(){
 				log_warning 'Перезапуск клиента VLESS (рестарт тоннеля)'
 
 				${XRAY_INIT} restart
+			else
+				cli_request="localhost:79/rci/interface/${inface}"
+				# Не передёргивать Proxy21 через RCI: Keenetic может убрать
+				# основной WAN default route при повторном up прокси-интерфейса.
+				curl -s -d '{"up":"true"}' "${cli_request}"  &>/dev/null
 			fi
-
-			cli_request="localhost:79/rci/interface/${inface}"
-#			curl -s -d '{"down":"true"}' "${cli_request}"  &>/dev/null
-#			reset_ISP_connection
-			curl -s -d '{"up":"true"}' "${cli_request}"  &>/dev/null
 		fi
 	} && when_ok "УСПЕШНО" || when_bad "ОШИБКА"
 

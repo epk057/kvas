@@ -18,6 +18,30 @@
 # Конфигурация failover
 FAILOVER_CONF="/opt/etc/kvas.failover.conf"
 FAILOVER_LOG="/opt/var/log/kvas-failover.log"
+HYSTERIA_CLI="Proxy41"
+
+failover_mapping() {
+    local cli="$1"
+    local ent
+    ent=$(grep "^${cli}|" "${INFACE_NAMES_FILE}" 2>/dev/null | cut -d'|' -f2)
+    if [ -z "$ent" ]; then
+        log_failover "Нет mapping для $cli; автоматическое переключение отменено."
+        return 1
+    fi
+    if [ -z "$(get_value_interface_field "$cli" id)" ]; then
+        log_failover "Интерфейс $cli отсутствует в RCI; автоматическое переключение отменено."
+        return 1
+    fi
+    FAILOVER_IFACE_CLI="$cli"
+    FAILOVER_IFACE_ENT="$ent"
+}
+
+failover_is_selected() {
+    case "$(get_config_value INFACE_CLI)" in
+        "${PROXY_VLESS_NAME}"|"${HYSTERIA_CLI}") return 0 ;;
+        *) return 1 ;;
+    esac
+}
 
 # Инициализация конфига failover
 init_failover_conf() {
@@ -52,6 +76,7 @@ EOF
 
 # Проверка работоспособности vless
 check_vless() {
+    failover_is_selected || return 1
     local pidfile="/var/run/xray.pid"
     local was_running=0
     
@@ -88,6 +113,7 @@ check_vless() {
 
 # Проверка работоспособности hysteria
 check_hysteria() {
+    failover_is_selected || return 1
     local pidfile="/var/run/hysteria.pid"
     local bin_path="/opt/apps/kvas/hysteria/bin/hysteria"
     
@@ -116,10 +142,9 @@ get_active_protocol() {
 # Переключение на vless - используем switch_vpn_on из vpn библиотеки
 switch_to_vless() {
     log_failover "Переключение на VLESS..."
-    
-    # Используем switch_vpn_on - ту же функцию что и kvas vpn set
-    # Proxy21 - это entware имя для vless интерфейса
-    switch_vpn_on "Proxy21" "Proxy21" 2>/dev/null
+
+    failover_mapping "${PROXY_VLESS_NAME}" || return 1
+    switch_vpn_on "${FAILOVER_IFACE_ENT}" "${FAILOVER_IFACE_CLI}" 2>/dev/null || return 1
     
     log_failover "Переключено на VLESS"
     return 0
@@ -128,10 +153,9 @@ switch_to_vless() {
 # Переключение на hysteria - используем switch_vpn_on из vpn библиотеки
 switch_to_hysteria() {
     log_failover "Переключение на Hysteria..."
-    
-    # Используем switch_vpn_on - ту же функцию что и kvas vpn set
-    # Proxy41 - это entware имя для hysteria интерфейса
-    switch_vpn_on "Proxy41" "Proxy41" 2>/dev/null
+
+    failover_mapping "${HYSTERIA_CLI}" || return 1
+    switch_vpn_on "${FAILOVER_IFACE_ENT}" "${FAILOVER_IFACE_CLI}" 2>/dev/null || return 1
     
     log_failover "Переключено на Hysteria"
     return 0
@@ -156,6 +180,9 @@ run_failover_check() {
     if [ "$FAILOVER_MODE" != "failover" ]; then
         return 0
     fi
+
+    # Не вмешиваться в вручную выбранный OpenVPN или другой резервный канал.
+    failover_is_selected || return 0
     
     local active=$(get_active_protocol)
     local vless_ok=0

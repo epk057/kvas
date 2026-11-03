@@ -254,14 +254,25 @@ case "${1}" in
 							_t=$(_ts); echo "[KVAS_SET] $_t PROXY_VLESS_NAME=[${PROXY_VLESS_NAME}]" >&2; echo "[KVAS_SET] $_t PROXY_VLESS_NAME=[${PROXY_VLESS_NAME}]" >> "$LOG"
 							iface_ent=$(grep "^${iface_cli}|" "${INFACE_NAMES_FILE}" 2>/dev/null | cut -d'|' -f2)
 							_t=$(_ts); echo "[KVAS_SET] $_t grep из INFACE_NAMES_FILE: iface_ent=[$iface_ent]" >&2; echo "[KVAS_SET] $_t grep из INFACE_NAMES_FILE: iface_ent=[$iface_ent]" >> "$LOG"
-							[ -z "$iface_ent" ] && iface_ent="$iface_cli" && _t=$(_ts); echo "[KVAS_SET] $_t iface_ent пуст, использую iface_cli=$iface_cli" >&2; echo "[KVAS_SET] $_t iface_ent пуст, использую iface_cli=$iface_cli" >> "$LOG"
+					if [ -z "$iface_ent" ]; then
+						_t=$(_ts); echo "[KVAS_SET] $_t Нет mapping для $iface_cli; переключение отменено" >&2; echo "[KVAS_SET] $_t Нет mapping для $iface_cli; переключение отменено" >> "$LOG"
+						exit 1
+					fi
 						else
 							_t=$(_ts); echo "[KVAS_SET] $_t Определение iface для hysteria" >&2; echo "[KVAS_SET] $_t Определение iface для hysteria" >> "$LOG"
 							iface_cli="Proxy41"
 							iface_ent=$(grep "^${iface_cli}|" "${INFACE_NAMES_FILE}" 2>/dev/null | cut -d'|' -f2)
 							_t=$(_ts); echo "[KVAS_SET] $_t grep из INFACE_NAMES_FILE: iface_ent=[$iface_ent]" >&2; echo "[KVAS_SET] $_t grep из INFACE_NAMES_FILE: iface_ent=[$iface_ent]" >> "$LOG"
-							[ -z "$iface_ent" ] && iface_ent="$iface_cli" && _t=$(_ts); echo "[KVAS_SET] $_t iface_ent пуст, использую iface_cli=$iface_cli" >&2; echo "[KVAS_SET] $_t iface_ent пуст, использую iface_cli=$iface_cli" >> "$LOG"
-						fi
+					if [ -z "$iface_ent" ]; then
+						_t=$(_ts); echo "[KVAS_SET] $_t Нет mapping для $iface_cli; переключение отменено" >&2; echo "[KVAS_SET] $_t Нет mapping для $iface_cli; переключение отменено" >> "$LOG"
+						exit 1
+					fi
+				fi
+
+				if [ -z "$(get_value_interface_field "$iface_cli" id)" ]; then
+					_t=$(_ts); echo "[KVAS_SET] $_t Интерфейс $iface_cli отсутствует в RCI; переключение отменено" >&2; echo "[KVAS_SET] $_t Интерфейс $iface_cli отсутствует в RCI; переключение отменено" >> "$LOG"
+					exit 1
+				fi
 						
 						_t=$(_ts); echo "[KVAS_SET] $_t INFACE_NAMES_FILE=${INFACE_NAMES_FILE}" >&2; echo "[KVAS_SET] $_t INFACE_NAMES_FILE=${INFACE_NAMES_FILE}" >> "$LOG"
 						_t=$(_ts); echo "[KVAS_SET] $_t iface_ent=[${iface_ent}] iface_cli=[${iface_cli}]" >&2; echo "[KVAS_SET] $_t iface_ent=[${iface_ent}] iface_cli=[${iface_cli}]" >> "$LOG"

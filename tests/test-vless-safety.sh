@@ -25,6 +25,9 @@ grep -Fq 'повторный link_reboot VLESS запрещён' "$ROOT/opt/etc/
 grep -Fq 'повторный link_reboot VLESS запрещён' "$ROOT/opt/etc/ndm/iflayerchanged.d/kvas-ips-reset"
 grep -Fq 'RCI down/up Proxy21 запрещён' "$ROOT/opt/bin/main/check_vpn"
 grep -Fq 'Основной WAN default route отсутствует' "$ROOT/opt/etc/ndm/ndm"
+grep -Fq 'Нет mapping для' "$ROOT/opt/bin/kvas"
+grep -Fq 'failover_mapping' "$ROOT/opt/bin/libs/failover"
+grep -Fq 'Не вмешиваться в вручную выбранный OpenVPN' "$ROOT/opt/bin/libs/failover"
 
 ipk=$("$ROOT/tools/build-ipk.sh" --compat-352 --output "$TMP")
 "$ROOT/tools/verify-compat-ipk.sh" "$ipk"

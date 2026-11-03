@@ -2353,10 +2353,20 @@ start_vless(){
 
 		# Запуск xray в случае, если конфигурация xray не содержит ошибок
 		ready "Запускаем xray сервис..."
-		service_action S97xray start && when_ok "УСПЕШНО" 
-		vpn_on "${_inface_entware}" &> /dev/null
-		# Проверяем работу (без вывода)
-		test_vless_proxy "${_inface_entware}" >/dev/null 2>&1
+		service_action S97xray start && when_ok "УСПЕШНО" || {
+			when_bad "ОШИБКА"
+			return 1
+		}
+		vpn_on "${_inface_entware}" &> /dev/null || {
+			log_error 'VLESS: не удалось подготовить Proxy21 и правила маршрутизации'
+			return 1
+		}
+		# connected=yes у Proxy21 не подтверждает работоспособность VLESS.
+		# Требуем реальный HTTPS-запрос через виртуальный интерфейс.
+		test_vless_proxy "${_inface_entware}" >/dev/null 2>&1 || {
+			log_error 'VLESS: проверочный HTTPS-запрос через Proxy21 не прошёл'
+			return 1
+		}
 		
 	else
 		# В случае, если есть ошибки в файле конфигурации, выводим их в консоль

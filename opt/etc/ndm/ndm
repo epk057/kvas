@@ -24,6 +24,10 @@ RULE_PRIORITY=99
 MARK_NUM=0xd1000
 DNS_PORT=9753
 
+# Этот файл загружается Keenetic отдельно от libs/vless, поэтому переменная
+# должна быть определена здесь для get_tunnel_ip() и исключения Reality-сервера.
+VLESS_CONFIG_FILE=/opt/etc/xray/kvas.json
+
 IPSET_DESTINATION_EXCLUDED=KVAS_DESTINATION_EXCLUDED
 
 CHAIN_DNS=KVAS_DNS
@@ -961,6 +965,20 @@ ip4_mark_vpn_network() {
 }
 
 ip4_firewall_set_all_rules() {
+	local rules_lock=/opt/tmp/kvas-rules.lock
+	local lock_pid=''
+	if ! mkdir "${rules_lock}" 2>/dev/null ; then
+		lock_pid=$(cat "${rules_lock}/pid" 2>/dev/null)
+		if [ -n "${lock_pid}" ] && kill -0 "${lock_pid}" 2>/dev/null ; then
+			log_warning "Пропуск параллельного перестроения KVAS-правил (PID ${lock_pid})"
+			return 0
+		fi
+		rm -f "${rules_lock}/pid"
+		rmdir "${rules_lock}" 2>/dev/null
+		mkdir "${rules_lock}" 2>/dev/null || return 1
+	fi
+	echo "$$" > "${rules_lock}/pid"
+	local rules_status=0
 	if is_shadowsocks_enabled ; then
 		ip4__shadowsocks__create_chain &>/dev/null
 
@@ -971,8 +989,11 @@ ip4_firewall_set_all_rules() {
 		#ToDo: сделать home отключаемой
 		ip4__shadowsocks__add_routing_for_home &> /dev/null
 	else
-		ip4_mark_vpn_network
+		ip4_mark_vpn_network || rules_status=1
 	fi
+	rm -f "${rules_lock}/pid"
+	rmdir "${rules_lock}" 2>/dev/null
+	return "${rules_status}"
 }
 
 
@@ -1202,13 +1223,14 @@ ip4__route__add_table() {
 
 	# если не gateway, то нужны 2 роута
 		if [ -z "${gateway_ip}" ] ; then
-			gateway_ip=$(get_ip_by_inface "${net_interface}")
-			if [ -z "${gateway_ip}" ] ; then
-				error "[${FUNCNAME}] При добавлении в таблицу маршрутизации ${ROUTE_TABLE_ID} не удалось определить IP шлюза для ${net_interface}"
-				return 1
-			elif is_vless_over_proxy_enabled ; then
+			if is_vless_over_proxy_enabled ; then
 				log_warning "VLESS: вспомогательный /24 маршрут для ${net_interface} не создается"
 			else
+				gateway_ip=$(get_ip_by_inface "${net_interface}")
+				if [ -z "${gateway_ip}" ] ; then
+					error "[${FUNCNAME}] При добавлении в таблицу маршрутизации ${ROUTE_TABLE_ID} не удалось определить IP шлюза для ${net_interface}"
+					return 1
+				fi
 				local gateway_net=$(get_net_by_ip "${gateway_ip}")
 				if [ -z "${gateway_net}" ]; then
 					error "[${FUNCNAME}] Не удалось определить сеть шлюза ${gateway_ip}"
@@ -1322,11 +1344,29 @@ cmd_vpn_iptable_reset() {
 	if is_shadowsocks_enabled ; then
 		warning 'VPN соединение не активно!'
 	else
+		local rules_lock=/opt/tmp/kvas-rules.lock
+		local lock_pid=''
+		if ! mkdir "${rules_lock}" 2>/dev/null ; then
+			lock_pid=$(cat "${rules_lock}/pid" 2>/dev/null)
+			if [ -n "${lock_pid}" ] && kill -0 "${lock_pid}" 2>/dev/null ; then
+				log_warning "Пропуск параллельного сброса KVAS-правил (PID ${lock_pid})"
+				return 0
+			fi
+			rm -f "${rules_lock}/pid"
+			rmdir "${rules_lock}" 2>/dev/null
+			mkdir "${rules_lock}" 2>/dev/null || return 1
+		fi
+		echo "$$" > "${rules_lock}/pid"
 		ready "Переустановка iptables для vpn завершена"
+		local reset_status=0
 		{
 			cmd_vpn_iptable_flush
-			ip4_mark_vpn_network
-		} &> /dev/null && when_ok "УСПЕШНО" || when_bad "C ОШИБКАМИ"
+			ip4_mark_vpn_network || reset_status=1
+		} &> /dev/null
+		rm -f "${rules_lock}/pid"
+		rmdir "${rules_lock}" 2>/dev/null
+		[ "${reset_status}" -eq 0 ] && when_ok "УСПЕШНО" || when_bad "C ОШИБКАМИ"
+		return "${reset_status}"
 	fi
 }
 

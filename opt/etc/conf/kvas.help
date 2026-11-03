@@ -1,0 +1,174 @@
+-------------------------------------------------------------------
+Утилита КВАС
+-------------------------------------------------------------------
+Пакет представляет собой обвязку или интерфейс командной строки
+для защиты Вашего соединения при обращении к определенным доменам.
+Поддержка: VLESS, Hysteria 2, Shadowsocks, OpenVPN, Wireguard, IKE
+Автопереключение: failover между VLESS и Hysteria
+
+== ОСНОВНЫЕ ==
+
+kvas setup                   - настройка пакета после установки через opkg
+kvas help                    - эта справка
+kvas ver|version             - текущая версия пакета
+kvas test                    - проверка всех служб
+kvas init|reset              - обновление таблиц и списков ipset
+
+== СПИСОК ДОМЕНОВ ==
+
+kvas show|list               - список хостов в защищенном списке
+kvas search|find <домен>     - поиск домена в списке
+kvas add|new <домен> [домен...] [-w]  - добавить хост(ы) ( -w wildcard, * в начале)
+kvas add <домен> -tag <тег>            - добавить хост с тегом
+kvas add tags                         - добавить группу по тегу ("закваска")
+kvas del <домен> [домен...]            - удалить хост(ы)
+kvas del tags                         - удалить группу по тегу
+kvas import                  - импорт доменов и IP из файла (# — комментарии)
+kvas export                  - экспорт списка в файл
+kvas purge|clear             - очистить весь список
+kvas clear force|yes         - очистка без вопроса (для cron)
+kvas clear ip                - очистка IP и диапазонов из IPSet
+kvas backup                  - создать резервную копию настроек в /opt/kvas_backup_<дата>
+kvas restore [путь]          - восстановить настройки из резервной копии
+
+== ТЕГИ ==
+
+kvas tags list [тег]         - список тегов или доменов по тегу
+kvas tags add <тег> <домен>  - закрепить тег за доменом
+kvas tags del <тег> <домен>  - открепить тег
+kvas tags update [force]     - обновить список заквасок с GitHub
+
+== VPN ПОДКЛЮЧЕНИЯ ==
+
+kvas vpn                     - текущий VPN интерфейс и состояние
+kvas vpn set                 - выбрать VPN из списка
+kvas vpn set vless           - переключение на VLESS
+kvas vpn set hysteria        - переключение на Hysteria
+kvas vpn reset               - обновить iptables для VPN
+kvas vpn rescan|scan         - сканирование интерфейсов роутера
+kvas vpn net|guest           - правила для гостевой/VPN сети
+kvas vpn net|guest add       - подключить гостевую сеть к VPN
+kvas vpn net|guest del       - отключить гостевую сеть от VPN
+kvas vpn gateway <IP>        - VPN через устройство в локальной сети
+
+== VLESS ==
+
+kvas vless new               - настройка VLESS (запрос ссылки vless://)
+
+== HYSTERIA 2 ==
+
+kvas hysteria                - статус Hysteria 2
+kvas hysteria new            - настройка (скачает бинарник если не установлен, запрос ссылки hysteria://)
+kvas hysteria install        - скачивание/обновление бинарника
+kvas hysteria test           - тест проксирования через туннель
+kvas hysteria start          - запуск службы
+kvas hysteria stop           - остановка службы
+kvas hysteria restart        - перезапуск службы
+
+== FAILOVER (автопереключение) ==
+
+kvas failover                - статус автопереключения
+kvas failover on             - включить
+kvas failover off            - выключить
+kvas failover start          - запустить демон
+kvas failover stop           - остановить демон
+kvas failover status         - статус и логи
+kvas failover primary <proto>- основной протокол (vless|hysteria)
+kvas failover set interval <N>    - интервал проверки (сек, по умолч. 15)
+kvas failover set threshold <N>   - порог ошибок (по умолч. 2)
+kvas failover log [N]        - последние N записей лога
+kvas failover test           - тест обоих каналов
+
+== DNS ==
+
+kvas dns                     - текущий DNS сервер
+kvas dns test <домен>        - тест DNS (по умолч. google.com)
+kvas dns server IP:PORT      - подключить DNS сервер в локальной сети
+kvas dnsmasq                 - порт и IP dnsmasq
+kvas dnsmasq port <N>        - изменить порт dnsmasq
+kvas dnsmasq ip <N>          - изменить IP dnsmasq
+kvas dnscrypt                - статус шифрования DNS
+kvas dnscrypt on|off         - включить/выключить dnscrypt-proxy2
+
+== БЛОКИРОВКА РЕКЛАМЫ ==
+
+kvas adblock                 - состояние блокировки рекламы
+kvas adblock add <домен>     - добавить в исключения
+kvas adblock del <домен>     - удалить из исключений
+kvas adblock on|off          - включить/выключить блокировку
+kvas adblock edit            - редактировать источники блокировки
+kvas adguard on              - AdGuard Home как DNS сервер
+kvas adguard off             - отключить AdGuard Home
+kvas adguard test            - тест ipset для AdGuard
+kvas adguard update          - обновить AdGuard
+
+== HOSTS ==
+
+kvas hosts                   - содержимое /opt/etc/hosts
+kvas hosts add <IP> <домен>  - добавить запись
+kvas hosts del <IP|домен>    - удалить запись
+kvas hosts edit              - редактировать файл
+kvas hosts prune             - очистить файл
+
+== МАРШРУТИЗАЦИЯ ==
+
+kvas tunnel                  - информация о подключениях
+kvas route                   - критерии попадания в тоннель
+kvas route list              - текущие списки (full/list/exclude)
+kvas route add full <IP>     - ВСЁ от IP в тоннель
+kvas route add list <IP>     - в тоннель по списку КВАС
+kvas route add exclude <IP>  - исключить из перехвата
+kvas route del full <IP>     - убрать из "всё в тоннель"
+kvas route del list <IP>     - убрать из "по списку"
+kvas route del exclude <IP>  - убрать из исключённых
+kvas route refresh           - применить изменения
+
+== ДИАГНОСТИКА ==
+
+kvas log [N]                 - последние события пакета
+kvas log info [N]            - информационные сообщения
+kvas log error [N]           - ошибки пакета
+kvas log error detail        - полные ошибки из лог-файла
+kvas log error clear         - очистить лог ошибок
+kvas syslog [N]              - события системы
+kvas syslog info|error [N]   - сообщения/ошибки системы
+kvas ipset                   - IP для попадания в тоннель
+kvas ipset <IP>              - проверка IP в списке
+kvas ipset add <IP>          - добавить IP в список
+kvas ipset flush             - очистить список
+kvas ipset refill            - заполнить список из доменов
+kvas debug                   - отладочная информация
+kvas debug dns               - отладка DNS
+kvas debug iptables          - отладка iptables
+
+== УПРАВЛЕНИЕ ПАКЕТОМ ==
+
+kvas upgrade                 - обновление пакета из GitHub (выбор репозитория)
+kvas update                  - обновление ipset-списков и маршрутов
+kvas upgrade force           - принудительная переустановка
+kvas upgrade force full      - переустановка с удалением данных
+kvas rollback                - откат на предыдущую версию
+kvas rollback full           - откат с удалением данных
+kvas uninstall               - удаление (конфиги сохраняются)
+kvas uninstall full          - полное удаление с зависимостями
+kvas uninstall yes           - удаление без вопроса
+kvas pause|freeze            - приостановка пакета
+kvas unpause|unfreeze        - возобновление работы
+
+== OPKG ==
+
+opkg install <файл>.ipk     - установка пакета
+opkg install <файл>.ipk --force-reinstall
+                             - принудительная переустановка (downgrade OK)
+
+== ПРИМЕРЫ ==
+
+kvas add ya.ru test.ru       - добавить несколько доменов
+kvas add ya.ru              - добавить ya.ru в список
+kvas vpn set vless          - переключиться на VLESS
+kvas hysteria new           - настроить Hysteria 2
+kvas failover on            - включить автопереключение
+kvas route add full 1.2.3.4 - всё от 1.2.3.4 в тоннель
+kvas route exclude 5.6.7.8  - исключить 5.6.7.8
+kvas route refresh          - применить маршруты
+kvas test                   - проверить работу пакета

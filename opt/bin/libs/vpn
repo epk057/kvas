@@ -27,6 +27,11 @@ MINUS=10
 DNS_IP_PORT="${LOCALHOST_IP}#${MAIN_DNS_PORT}"
 CMD_LIST="address prefix name-servers"
 
+VLESS_ROLLBACK_DIR=/opt/rescue/kvas-vless-rollback
+VLESS_ROLLBACK_STATE=${VLESS_ROLLBACK_DIR}/state
+VLESS_ROLLBACK_PLAN=${VLESS_ROLLBACK_DIR}/kvas-vless-rollback.md
+VLESS_ROLLBACK_SCRIPT=/opt/rescue/kvas-vless-rollback.sh
+
 # ------------------------------------------------------------------------------------------
 #
 # Обновляем таблицу iptable и правила в ней
@@ -44,6 +49,72 @@ update_iptables(){
 	ready "${prefix}Создаем iptables правила."
 	ip4_firewall_set_all_rules &> /dev/null && when_ok "УСПЕШНО" || { when_bad "ОШИБКА"; update_status=1; }
 	return "${update_status}"
+}
+
+prepare_vless_rollback() {
+	local old_cli old_ent old_addr
+	old_cli=$(get_config_value INFACE_CLI)
+	old_ent=$(get_config_value INFACE_ENT)
+	old_addr=$(get_config_value ADDR_MAN)
+
+	if [ -z "${old_cli}" ] || [ -z "${old_ent}" ] || [ "${old_cli}" = "${PROXY_VLESS_NAME}" ]; then
+		log_error 'VLESS: нет безопасного предыдущего интерфейса для ручного отката'
+		return 1
+	fi
+	case "${old_cli}|${old_ent}|${old_addr}" in
+		*[!A-Za-z0-9_.:+/-]*)
+			log_error 'VLESS: небезопасные символы в состоянии ручного отката'
+			return 1
+		;;
+	esac
+	if ! grep -Fq "${old_cli}|${old_ent}|" "${INFACE_NAMES_FILE}" 2>/dev/null ; then
+		log_error "VLESS: mapping предыдущего интерфейса ${old_cli}/${old_ent} не подтверждён"
+		return 1
+	fi
+
+	mkdir -p "${VLESS_ROLLBACK_DIR}" || return 1
+	printf 'OLD_INFACE_CLI=%s\nOLD_INFACE_ENT=%s\nOLD_ADDR_MAN=%s\n' \
+		"${old_cli}" "${old_ent}" "${old_addr}" > "${VLESS_ROLLBACK_STATE}" || return 1
+	chmod 600 "${VLESS_ROLLBACK_STATE}"
+	cp -f /opt/apps/kvas/rescue/kvas-vless-rollback.sh "${VLESS_ROLLBACK_SCRIPT}" || return 1
+	chmod 700 "${VLESS_ROLLBACK_SCRIPT}"
+
+	cat > "${VLESS_ROLLBACK_PLAN}" <<EOF
+# Ручной откат неудачного переключения VLESS
+
+Сценарий не выполняет автоматический возврат к OpenVPN.
+Перед переключением был сохранён интерфейс:
+
+- CLI: ${old_cli}
+- Entware: ${old_ent}
+- ADDR_MAN: ${old_addr}
+
+Из независимой консоли или оставшегося SSH-сеанса выполнить:
+
+    ${VLESS_ROLLBACK_SCRIPT}
+
+После выполнения проверить:
+
+    /opt/bin/kvas vpn
+    ndmc -c 'show interface ${old_cli}'
+    ip route get 1.1.1.1
+    ip route show table 1001
+
+Ожидается: ${old_cli} подключён, WAN default route не изменён, table 1001
+содержит маршрут через ${old_ent}.
+EOF
+	chmod 600 "${VLESS_ROLLBACK_PLAN}"
+	return 0
+}
+
+vless_fail_closed() {
+	local reason="${1:-неизвестная ошибка}"
+	[ -x "${XRAY_INIT}" ] && "${XRAY_INIT}" stop >/dev/null 2>&1
+	log_error "VLESS: активация остановлена в fail-closed режиме: ${reason}"
+	echo "VLESS не активирован: ${reason}"
+	echo "Автоматический откат не выполнялся. Ручной план: ${VLESS_ROLLBACK_PLAN}"
+	echo "Команда отката: ${VLESS_ROLLBACK_SCRIPT}"
+	return 1
 }
 
 # ------------------------------------------------------------------------------------------
@@ -2357,16 +2428,17 @@ start_vless(){
 		ready "Запускаем xray сервис..."
 		service_action S97xray start && when_ok "УСПЕШНО" || {
 			when_bad "ОШИБКА"
+			vless_fail_closed 'не удалось запустить S97xray'
 			return 1
 		}
 		vpn_on "${_inface_entware}" &> /dev/null || {
-			log_error 'VLESS: не удалось подготовить Proxy21 и правила маршрутизации'
+			vless_fail_closed 'не удалось подготовить Proxy21 и правила маршрутизации'
 			return 1
 		}
 		# connected=yes у Proxy21 не подтверждает работоспособность VLESS.
 		# Требуем реальный HTTPS-запрос через виртуальный интерфейс.
 		test_vless_proxy "${_inface_entware}" >/dev/null 2>&1 || {
-			log_error 'VLESS: проверочный HTTPS-запрос через Proxy21 не прошёл'
+			vless_fail_closed 'проверочный HTTPS-запрос через Proxy21 не прошёл'
 			return 1
 		}
 		
@@ -2383,6 +2455,9 @@ switch_vpn_on(){
 #	entware интерфейс
 	inface_entware=${1}
 	cli_inface=${2}
+	if [ "${cli_inface}" = "${PROXY_VLESS_NAME}" ]; then
+		prepare_vless_rollback || return 1
+	fi
 #	Меняем интерфейс в файле ndm
 	ndm_interface_change "${inface_entware}" "${cli_inface}"
 	

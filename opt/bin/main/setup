@@ -153,7 +153,7 @@ cmd_pause_kvas(){
 		[ -f /opt/etc/ndm/iflayerchanged.d/kvas-ips-reset ] && {
 			mv /opt/etc/ndm/iflayerchanged.d/kvas-ips-reset ${KVAS_BACKUP_PATH}/kvas-ips-reset-layer
 		}
-		[ -f /opt/etc/ndm/ifstatechanged.d/kvas-ips-reset ] && {
+		[ -f /opt/etc/ndm/ifstatechanged.d/100-kvas-vpn ] && {
 			mv /opt/etc/ndm/ifstatechanged.d/100-kvas-vpn ${KVAS_BACKUP_PATH}/100-kvas-vpn-state
 		}
 		[ -f /opt/etc/ndm/netfilter.d/100-proxy-redirect ] && {
@@ -574,8 +574,8 @@ cmd_install(){
 	mkdir -p "${KVAS_BACKUP_PATH}"
 	cat /dev/null > "${INSTALL_LOG}"
 
-	[ -d "/opt/etc/ndm/iflayerchanged.d" ] || mkdir -p /opt/etc/ndm/iflayerchanged.d
 	hook_dir=$(get_hook_dir); home_dir=/opt/apps/kvas
+	mkdir -p "/opt/etc/ndm/${hook_dir}"
 	ln -sf "${home_dir}/etc/ndm/${hook_dir}/100-kvas-vpn" "/opt/etc/ndm/${hook_dir}/100-kvas-vpn"
 	ln -sf "${home_dir}/etc/ndm/iflayerchanged.d/kvas-ips-reset" "/opt/etc/ndm/iflayerchanged.d/kvas-ips-reset"
 	ln -sf "${home_dir}/etc/ndm/ifcreated.d/kvas-iface-add" "/opt/etc/ndm/ifcreated.d/kvas-iface-add"
@@ -982,4 +982,3 @@ cmd_uninstall() {
 		echo "Удаление КВАСа завершено."
 	fi
 }
-

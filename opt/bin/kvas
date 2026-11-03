@@ -195,7 +195,11 @@ case "${1}" in
 
 	vless)
 		case "${2}" in
-			new) 	rm -f "${VLESS_CONFIG_FILE}" 
+			new) 	if [ -f "${VLESS_CONFIG_FILE}" ]; then
+					mkdir -p "$(dirname "${VLESS_CONFIG_FILE_BACKUP}")"
+					cp -f "${VLESS_CONFIG_FILE}" "${VLESS_CONFIG_FILE_BACKUP}" || exit 1
+				fi
+				rm -f "${VLESS_CONFIG_FILE}"
 					start_vless "$(cat ${INFACE_NAMES_FILE} | grep vless | cut -d'|' -f2)"
 				;;
 			*) 		cmd_install_proxy_package 
@@ -319,10 +323,15 @@ case "${1}" in
 						update_iptables || exit 1
 						_d=$(( $(_sec) - _s )); _t=$(_ts); echo "[KVAS_SET] $_t <<< update_iptables (${_d}s)" >&2; echo "[KVAS_SET] $_t <<< update_iptables (${_d}s)" >> "$LOG"
 						
-						_s=$(_sec); _t=$(_ts); echo "[KVAS_SET] $_t >>> start_failover_daemon" >&2; echo "[KVAS_SET] $_t >>> start_failover_daemon" >> "$LOG"
-						start_failover_daemon > /dev/null 2>&1 &
-						echo $! > /var/run/kvas-failover.pid
-						_d=$(( $(_sec) - _s )); _t=$(_ts); echo "[KVAS_SET] $_t <<< failover daemon запущен PID $! (${_d}s)" >&2; echo "[KVAS_SET] $_t <<< failover daemon запущен PID $! (${_d}s)" >> "$LOG"
+						load_failover_conf
+						if [ "${FAILOVER_MODE}" = "failover" ] && [ "${AUTO_START:-yes}" != "no" ]; then
+							_s=$(_sec); _t=$(_ts); echo "[KVAS_SET] $_t >>> start_failover_daemon" >&2; echo "[KVAS_SET] $_t >>> start_failover_daemon" >> "$LOG"
+							start_failover_daemon > /dev/null 2>&1 &
+							echo $! > /var/run/kvas-failover.pid
+							_d=$(( $(_sec) - _s )); _t=$(_ts); echo "[KVAS_SET] $_t <<< failover daemon запущен PID $! (${_d}s)" >&2; echo "[KVAS_SET] $_t <<< failover daemon запущен PID $! (${_d}s)" >> "$LOG"
+						else
+							_t=$(_ts); echo "[KVAS_SET] $_t failover daemon не запускается: режим ${FAILOVER_MODE:-manual}" >> "$LOG"
+						fi
 						
 						_t=$(_ts); echo "[KVAS_SET] $_t === Переключение на $proto завершено ===" >&2; echo "[KVAS_SET] $_t === Переключение на $proto завершено ===" >> "$LOG"
 						;;

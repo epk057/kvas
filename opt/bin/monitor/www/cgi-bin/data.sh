@@ -206,12 +206,10 @@ print_devices_json() {
 			if command -v jq >/dev/null 2>&1; then
 				_kvas_list=$(echo "$_kvas_bindings" | jq -r '.lease[] | "\(.ip)|\(.name)"' 2>/dev/null)
 			else
-				_kvas_list=$(echo "$_kvas_bindings" | sed 's/.*"lease":\[//' | sed 's/\].*//' | \
-					sed 's/},{/}\n{/g' | while IFS= read -r _kvas_entry; do
-					_kvas_ip=$(echo "$_kvas_entry" | grep -o '"ip":"[^"]*"' | cut -d'"' -f4)
-					_kvas_name=$(echo "$_kvas_entry" | grep -o '"name":"[^"]*"' | cut -d'"' -f4)
-					[ -n "$_kvas_ip" ] && echo "${_kvas_ip}|${_kvas_name}"
-				done)
+				_kvas_list=$(echo "$_kvas_bindings" | awk -F'"' '
+					/"ip":/ { ip = $4 }
+					/"name":/ { name = $4; if (ip) { print ip "|" name; ip=""; name="" } }
+				')
 			fi
 		fi
 	fi

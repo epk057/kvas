@@ -128,8 +128,6 @@ kvas route refresh           - применить изменения
 kvas log [N]                 - последние события пакета
 kvas log info [N]            - информационные сообщения
 kvas log error [N]           - ошибки пакета
-kvas log error detail        - полные ошибки из лог-файла
-kvas log error clear         - очистить лог ошибок
 kvas syslog [N]              - события системы
 kvas syslog info|error [N]   - сообщения/ошибки системы
 kvas ipset                   - IP для попадания в тоннель

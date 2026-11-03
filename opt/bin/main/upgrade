@@ -23,7 +23,7 @@ set_escapes(){
 # для управления опциями экрана терминала
 	RED="\033[1;31m";
 	GREEN="\033[1;32m";
-	BLUE="\033[36m";
+	BLUE="\033[33m";
 	NOCL="\033[m";
 	QST="${RED}?${NOCL}"
 }
@@ -128,7 +128,8 @@ select_release_from_list(){
 # 	и позволяет выбрать один из них в случае использования режима "отката"
 
 	url_list=$(curl -s "${release_url}" | jq -r '.[] | .assets | .[] | .browser_download_url')
-	rel_list=$(echo "${url_list}" | cut -d'/' -f8)
+	url_list=$(echo "${url_list}" | sort -t'/' -k9 -V -r)
+	rel_list=$(echo "${url_list}" | sed 's/.*\/kvas_//; s/_all\.ipk//')
 	num=1; total=$(echo "${rel_list}" | wc -l)
 
 	if [ -n "${rel_list}" ]; then
@@ -183,9 +184,41 @@ remove_nano(){
 #--------------------------------------------------------------------------------------------------------------
 
 # Ссылка на репозиторий на GitHub для получения крайней версии пакета
-release_url=https://api.github.com/repos/qzeleza/kvas/releases
+# Можно переопределить в kvas.conf: KVAS_GITHUB_REPO=Anonimus2026/kvas
+_kvas_conf=/opt/etc/kvas.conf
+_kvas_github_repo=""
+[ -f "${_kvas_conf}" ] && _kvas_github_repo=$(grep "^KVAS_GITHUB_REPO=" "${_kvas_conf}" | head -1 | cut -d'=' -f2)
+
+# Если репозиторий не выбран — спрашиваем при первом запуске
+if [ -z "${_kvas_github_repo}" ]; then
+	print_line
+	echo -e "Выберите источник обновлений:"
+	echo -e "  ${GREEN}1${NOCL}) ${BLUE}qzeleza/kvas${NOCL}       — официальный репозиторий (рекомендуется)"
+	echo -e "  ${GREEN}2${NOCL}) ${BLUE}Anonimus2026/kvas${NOCL}  — форк с Hysteria 2 и failover"
+	echo ""
+	echo -n "Ваш выбор [1/2]: "
+	read _repo_choice
+	case "${_repo_choice}" in
+		2) _kvas_github_repo="Anonimus2026/kvas" ;;
+		*) _kvas_github_repo="qzeleza/kvas" ;;
+	esac
+	# Сохраняем выбор в kvas.conf
+	if [ -f "${_kvas_conf}" ]; then
+		if grep -q "^KVAS_GITHUB_REPO=" "${_kvas_conf}"; then
+			sed -i "s/^KVAS_GITHUB_REPO=.*/KVAS_GITHUB_REPO=${_kvas_github_repo}/" "${_kvas_conf}"
+		else
+			echo "KVAS_GITHUB_REPO=${_kvas_github_repo}" >> "${_kvas_conf}"
+		fi
+	fi
+	print_line
+	echo -e "Источник обновлений: ${GREEN}${_kvas_github_repo}${NOCL}"
+	print_line
+fi
+
+release_url=https://api.github.com/repos/${_kvas_github_repo}/releases
 # Получаем ссылку на крайний релиз пакета на GitHub
-package_url=$(curl -sH "Accept: application/vnd.github.v3+json" ${release_url}/latest | sed -n 's/.*browser_download_url\": "\(.*\)\"/\1/p;'| tr -d ' ' |  sed '/^$/d')
+# Берём только последний (самый новый) ipk файл из релиза
+package_url=$(curl -skH "Accept: application/vnd.github.v3+json" ${release_url}/latest | sed -n 's/.*browser_download_url\": "\(.*\.ipk\)"/\1/p' | tr -d ' ' | sort -V | tail -1)
 # Выделяем имя пакета из ссылки
 package_name=$(get_package_name "${package_url}")
 # путь к файлу конфигурации пакета Квас
@@ -264,7 +297,7 @@ fi
 
 #--------------------------------------------------------------------------------------------------------------
 # получаем из имени файла его номер версии
-version=$(echo "${package_name}" | sed 's/kvas_\(.*\)_all.*/\1/; s/-/ /g; s/_/-/' )
+version=$(echo "${package_name}" | sed 's/kvas_\(.*\)_all.*/\1/; s/_/ /g')
 
 # если в параметрах нет аргумента rollback, то выводим линию
 echo "${*}" | grep -q 'rollback' && CL_VER=${RED} || { 
@@ -293,14 +326,11 @@ remove_nano
 #--------------------------------------------------------------------------------------------------------------
 ready 'Загружаем пакет...'
 {
-
-	cd /opt/packages
 	rm -f "/opt/packages/${package_name}"
-	curl -sOL "${package_url}"
-
+	curl -sLk --connect-timeout 15 --max-time 120 -o "/opt/packages/${package_name}" "${package_url}"
 } &>/dev/null && when_ok || when_err
-# в случае если отсутствует соединение с интернетом
-! [ -f "${package_name}" ] && {
+# в случае если файл не скачался
+! [ -f "/opt/packages/${package_name}" ] && {
 	print_error "Проверьте свое интернет соединение!"
 	exit 1
 }
@@ -308,16 +338,18 @@ ready 'Загружаем пакет...'
 #--------------------------------------------------------------------------------------------------------------
 # если обнаружена предыдущая незавершенная установка пакета
 if [ -f /opt/bin/kvas ] && kvas | grep -q 'Настройка пакета не завершена' ; then
-	ready 'Удаляем незавершенную ранее установку пакета ...'
-	kvas uninstall "${remove_mode}" yes &>/dev/null && when_ok || when_err
+    ready 'Удаляем незавершенную ранее установку пакета ...'
+    [ -f /opt/etc/tags.list ] && mkdir -p /tmp/kvas_tags_backup && cp -f /opt/etc/tags.list /tmp/kvas_tags_backup/tags.list 2>/dev/null || true
+    kvas uninstall "${remove_mode}" yes &>/dev/null; when_ok
 else
 #	если все хорошо и обнаружена предыдущая версия пакета, то удаляем ее
-	if [ -f /opt/bin/kvas ]; then
-		ver=$(grep "APP_VERSION=" "${kvas_conf}" | cut -d'=' -f2)
-		rel=$(grep "APP_RELEASE=" "${kvas_conf}" | cut -d'=' -f2)
-		#ready "Удаляем предыдущую версию пакета  [${ver} ${rel}]..."
-		kvas uninstall "${remove_mode}" yes # && when_ok || when_err
-	fi
+    if [ -f /opt/bin/kvas ]; then
+        ver=$(grep "APP_VERSION=" "${kvas_conf}" | cut -d'=' -f2)
+        rel=$(grep "APP_RELEASE=" "${kvas_conf}" | cut -d'=' -f2)
+        ready "Удаляем предыдущую версию пакета   [${ver} ${rel}]..."
+        [ -f /opt/etc/tags.list ] && mkdir -p /tmp/kvas_tags_backup && cp -f /opt/etc/tags.list /tmp/kvas_tags_backup/tags.list 2>/dev/null || true
+        kvas uninstall "${remove_mode}" yes &>/dev/null; when_ok
+    fi
 fi
 
 #--------------------------------------------------------------------------------------------------------------
@@ -347,19 +379,16 @@ if ! [ -f /opt/bin/kvas ] ; then
 	exit 1
 else
 	sleep 1
+	# Включаем dns-override ДО setup (так было в оригинале)
 	curl -s "http://localhost:79/rci/opkg/dns-override" | grep -q true || {
-		# Отключаем системный DNS-сервер роутера
-		echo 'Отключаем работу через DNS-провайдера  роутера...'
-		echo "Возможно, что сейчас произойдет выход из сессии..."
-		echo "В этом случае необходимо заново войти в сессию по ssh"
-		echo "и выполнить команду 'kvas setup ${UPDATE_MODE}'"
-		rci_post '[{"opkg": {"dns-override": true}},{"system": {"configuration": {"save": true}}}]' &>/dev/null 
+		echo 'Включаем dns-override для работы kvas...'
+		rci_post '[{"opkg": {"dns-override": true}},{"system": {"configuration": {"save": true}}}]' &>/dev/null
 	}
-		# 	если файл пакета найден после установки пакета,
-	# 	то запускаем установку и затем тестирование пакета
 	kvas setup "${UPDATE_MODE}" && {
-		# подключаем гостевые сети, если они имется
-		connect_home_nets
+		# подключаем гостевые сети только при ПЕРВОЙ установке
+		if [ "${UPDATE_MODE}" != "true" ]; then
+			connect_home_nets
+		fi
 		print_line
 		echo 'Тестируем настройки...'
 #		В данном случае, чтобы не печатать линию после

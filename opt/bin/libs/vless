@@ -21,7 +21,7 @@
 . /opt/apps/kvas/bin/libs/main
 
 XRAY=/opt/sbin/xray
-XRAY_INIT=/opt/etc/init.d/S24xray
+XRAY_INIT=/opt/etc/init.d/S97xray
 
 VLESS_CONFIG_FILE=/opt/etc/xray/kvas.json
 VLESS_CONFIG_ORIGINAL_FILE=/opt/apps/kvas/etc/conf/kvas.vless
@@ -31,7 +31,7 @@ PROXY_VLESS_DESC="Kvas-proxy-vless"
 PROXY_LOCAL_IP="127.0.0.1"
 PROXY_VLESS_PORT=1097
 PROXY_VLESS_PROTO=socks5
-DOMAIN_FOR_CHECK="ifconfig.me"
+DOMAIN_FOR_CHECK="myip.addr.tools"
 
 
 has_package_installed() {
@@ -611,7 +611,7 @@ _cmd_install_vless_proxy(){
     cmd_install_proxy_package
 
     vless_ln=''
-    has_xray_installed || opkg install xray &> /dev/null
+    has_xray_installed || opkg install xray >/dev/null 2>&1
     #read_value "Введите vless ссылку: " vless_ln string
 
     # DEBUG - восстановить после отладки

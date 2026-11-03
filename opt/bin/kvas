@@ -48,7 +48,7 @@ cmd_show_kvas_list(){
 	fi
 }
 
-if  echo "${1}" | grep -qvEi 'uninstall|hysteria|failover|vpn|route|ver|help' && [ -z "$(get_config_value "SETUP_FINISHED")" ]; then
+if  echo "${1}" | grep -qvEi 'uninstall|hysteria|failover|vpn|route|monitor|ver|help' && [ -z "$(get_config_value "SETUP_FINISHED")" ]; then
 	print_line
 	echo "${2}" | grep -qE 'upgrade|true' && warning "Запускаем настройку пакета" || {
 		error "Настройка пакета не завершена, запускаем настройку пакета" "1"
@@ -83,6 +83,16 @@ case "${1}" in
 		;;
 
 	add | new)
+		if [ "$2" = "tags" ]; then
+			shift 2
+			tag="${1:-}"
+			if [ -z "$tag" ]; then
+				add_tag_section_to_protect_list
+			else
+				cmd_add_tag_section_to_protect_list_noninteractive "$tag"
+			fi
+			exit 0
+		fi
 		_wild=""
 		_skip_first=1
 		_added=false
@@ -110,16 +120,22 @@ case "${1}" in
 		fi
 		;;
 	del | rm  )
+		if [ "$2" = "tags" ]; then
+			shift 2
+			tag="${1:-}"
+			if [ -z "$tag" ]; then
+				del_tag_section_to_protect_list
+			else
+				cmd_del_tag_section_from_protect_list_noninteractive "$tag"
+			fi
+			exit 0
+		fi
 		_skip_first=1
 		_deleted=false
 		for _arg; do
 			[ -n "$_skip_first" ] && { _skip_first=; continue; }
 			_domains="$_domains${_domains:+ }$_arg"
 		done
-		if [ "$_domains" = "tags" ]; then
-			del_tag_section_to_protect_list
-			exit 0
-		fi
 		for _dom in $_domains; do
 			[ -z "$_dom" ] && continue
 			ready "Удаляем $_dom из списка защищенных..."
@@ -150,6 +166,7 @@ case "${1}" in
 		BKPDIR="/opt/kvas_backup_$(date +%Y%m%d-%H%M%S)"
 		mkdir -p "$BKPDIR"
 		cp -f "$KVAS_LIST_FILE" "$BKPDIR/" 2>/dev/null
+		cp -f "$TAGS_LIST_FILE" "$BKPDIR/" 2>/dev/null
 		cp -f "$KVAS_CONF_FILE" "$BKPDIR/" 2>/dev/null
 		cp -f "$HYSTERIA_CONFIG" "$BKPDIR/" 2>/dev/null
 		cp -f "$HYSTERIA_ENV_FILE" "$BKPDIR/" 2>/dev/null
@@ -171,7 +188,7 @@ case "${1}" in
 			BKP=$(ls -dt /opt/kvas_backup_* 2>/dev/null | head -1)
 			[ -z "$BKP" ] && echo "Нет резервных копий" && exit 1
 		fi
-		for _f in "$KVAS_LIST_FILE" "$KVAS_CONF_FILE" "$HYSTERIA_CONFIG" "$HYSTERIA_ENV_FILE" "$SHADOWSOCKS_CONF" "$DNSMASQ_CONFIG" "$DNSMASQ_IPSET_HOSTS" "$DNSCRYPT_CONFIG" "$ADGUARDHOME_CONFIG" "$ADGUARD_IPSET_FILE" "$VLESS_CONFIG_FILE"; do
+		for _f in "$KVAS_LIST_FILE" "$TAGS_LIST_FILE" "$KVAS_CONF_FILE" "$HYSTERIA_CONFIG" "$HYSTERIA_ENV_FILE" "$SHADOWSOCKS_CONF" "$DNSMASQ_CONFIG" "$DNSMASQ_IPSET_HOSTS" "$DNSCRYPT_CONFIG" "$ADGUARDHOME_CONFIG" "$ADGUARD_IPSET_FILE" "$VLESS_CONFIG_FILE"; do
 			_b="${BKP}/$(basename $_f)"
 			[ -f "$_b" ] && cp -f "$_b" "$_f" 2>/dev/null && echo "Восстановлен: $(basename $_f)"
 		done
@@ -185,8 +202,31 @@ case "${1}" in
 			add)			cmd_add_domain_to_tag_list "${3}" "${4}" ;;
 			del)			cmd_del_domain_from_tag_list "${3}" "${4}" ;;
 			update)			cmd_update_tags_domain_list "${3}";;
+			create)			shift 2; cmd_create_tag_section "$@" ;;
+			add-protect)	cmd_add_tag_section_to_protect_list_noninteractive "${3}" ;;
+			del-protect)	cmd_del_tag_section_from_protect_list_noninteractive "${3}" ;;
+			edit)			cmd_edit_tag_section "${3}" ;;
+			edit-save)		shift 2; _es_section="$1"; shift; cmd_edit_tag_section_noninteractive "$_es_section" "$*" ;;
+			delete)		cmd_del_tag_section_from_protect_list_noninteractive "${3}"
+					cmd_del_tag_section_noninteractive "${3}" ;;
 			*) 				cmd_show_tags_domain_list "${2}" ;;
 		esac
+		;;
+	add_tags)
+		tag="$2"
+		if [ -z "$tag" ]; then
+			add_tag_section_to_protect_list
+		else
+			cmd_add_tag_section_to_protect_list_noninteractive "$tag"
+		fi
+		;;
+	del_tags)
+		tag="$2"
+		if [ -z "$tag" ]; then
+			del_tag_section_to_protect_list
+		else
+			cmd_del_tag_section_from_protect_list_noninteractive "$tag"
+		fi
 		;;
 
 	# Расширенные настройки
@@ -424,22 +464,22 @@ case "${1}" in
 		case "${2}" in
 			error | err)
 				if [ "${3}" = "detail" ] || [ "${3}" = "full" ]; then
-					# Показываем ВСЕ ошибки из лог-файла
+					# Показываем ВСЕ ошибки из лог-файла (фильтр [E])
 					print_line
 					echo "Полные ошибки КВАС:"
 					print_line
 					if [ -f /opt/tmp/kvas_errors.log ] && [ -s /opt/tmp/kvas_errors.log ]; then
-						tail -n "${4:-50}" /opt/tmp/kvas_errors.log
+						grep "\[E\]" /opt/tmp/kvas_errors.log | tail -n "${4:-50}"
 					else
 						echo "Лог-файл пуст."
 					fi
 				else
-					# Показываем из лог-файла (полные сообщения)
+					# Показываем ошибки из лог-файла (фильтр [E])
 					if [ -f /opt/tmp/kvas_errors.log ] && [ -s /opt/tmp/kvas_errors.log ]; then
 						print_line
 						echo "Ошибки КВАС:"
 						print_line
-						tail -n "${3:-20}" /opt/tmp/kvas_errors.log
+						grep "\[E\]" /opt/tmp/kvas_errors.log | tail -n "${3:-20}"
 					else
 						syslog__show "${2}" 'КВАС' 'Ошибки Кваса:' "${3}"
 					fi

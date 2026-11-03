@@ -141,7 +141,10 @@ vpn_check(){
 
 			# Проверяем реальную работу через прокси
 			ready "Проверка работоспособности прокси"
-			local test_ip=$(curl -s --connect-timeout 5 -x "socks5://127.0.0.1:1097" "https://ifconfig.me" 2>/dev/null)
+			local test_ip=$(curl -s --connect-timeout 5 -x "socks5://127.0.0.1:1097" "https://myip.addr.tools" 2>/dev/null)
+			if [ -z "$test_ip" ] || ! echo "$test_ip" | grep -qE "^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$"; then
+				test_ip=$(curl -s --connect-timeout 10 -x "socks5://127.0.0.1:1097" "https://ifconfig.me" 2>/dev/null)
+			fi
 			if [ -n "$test_ip" ] && echo "$test_ip" | grep -qE "^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$"; then
 				when_ok "РАБОТАЕТ (IP: $test_ip)"
 			else
@@ -559,7 +562,10 @@ cmd_state_checker() {
 			if [ -f "$env_conf" ]; then
 				. "$env_conf"
 				if [ -n "$PROXY_LOCAL_IP" ] && [ -n "$PROXY_LOCAL_PORT_SOCKS" ]; then
-					local hysteria_ip=$(curl -s --connect-timeout 8 --max-time 12 -x "socks5://${PROXY_LOCAL_IP}:${PROXY_LOCAL_PORT_SOCKS}" "https://ifconfig.me" 2>/dev/null)
+					local hysteria_ip=$(curl -s --connect-timeout 5 --max-time 12 -x "socks5://${PROXY_LOCAL_IP}:${PROXY_LOCAL_PORT_SOCKS}" "https://myip.addr.tools" 2>/dev/null)
+					if [ -z "$hysteria_ip" ] || echo "$hysteria_ip" | grep -q -E "(Failed|Error|404|html)"; then
+						hysteria_ip=$(curl -s --connect-timeout 10 --max-time 15 -x "socks5://${PROXY_LOCAL_IP}:${PROXY_LOCAL_PORT_SOCKS}" "https://ifconfig.me" 2>/dev/null)
+					fi
 					if [ -z "$hysteria_ip" ] || echo "$hysteria_ip" | grep -q -E "(Failed|Error|404|html)"; then
 						hysteria_ip=$(curl -s --connect-timeout 8 --max-time 12 -x "socks5://${PROXY_LOCAL_IP}:${PROXY_LOCAL_PORT_SOCKS}" "https://ipinfo.io/ip" 2>/dev/null)
 					fi

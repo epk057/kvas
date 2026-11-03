@@ -7,12 +7,13 @@ MAKEFILE=${MAKEFILE:-"$ROOT/Makefile"}
 OUT_DIR=${OUT_DIR:-"$ROOT/dist"}
 
 usage() {
-	printf '%s\n' "Usage: $0 [--output DIR] [--version VERSION] [--release RELEASE] [--surgical]"
+	printf '%s\n' "Usage: $0 [--output DIR] [--version VERSION] [--release RELEASE] [--surgical|--compat-352]"
 }
 
 version=$(sed -n 's/^PKG_VERSION:=//p' "$MAKEFILE" | head -n 1)
 release=$(sed -n 's/^PKG_RELEASE:=//p' "$MAKEFILE" | head -n 1 | tr -d '[:space:]')
 surgical=0
+compat_352=0
 
 while [ "$#" -gt 0 ]; do
 	case "$1" in
@@ -33,6 +34,10 @@ while [ "$#" -gt 0 ]; do
 			;;
 		--surgical)
 			surgical=1
+			shift
+			;;
+		--compat-352)
+			compat_352=1
 			shift
 			;;
 		-h|--help)
@@ -63,7 +68,23 @@ stage=$work/stage
 mkdir -p "$stage/opt/apps/kvas" "$stage/opt/etc/init.d" \
 	"$stage/opt/etc/ndm/fs.d" "$stage/opt/etc/ndm/netfilter.d"
 
-if [ "$surgical" -eq 1 ]; then
+if [ "$surgical" -eq 1 ] && [ "$compat_352" -eq 1 ]; then
+	echo "--surgical and --compat-352 are mutually exclusive" >&2
+	exit 2
+elif [ "$compat_352" -eq 1 ]; then
+	base_ipk="$ROOT/kvas_1.1.9_beta-10-352_all.ipk"
+	[ -f "$base_ipk" ] || { echo "missing beta-10-352 base IPK" >&2; exit 1; }
+	base=$work/base
+	mkdir -p "$base"
+	tar -xzf "$base_ipk" -C "$base"
+	tar -xzf "$base/data.tar.gz" -C "$stage"
+	# Start with the complete published 352 tree so opkg does not remove
+	# package-owned files, then overlay only the reviewed safety changes.
+	cp -a "$ROOT/opt/bin/libs/vpn" "$stage/opt/apps/kvas/bin/libs/vpn"
+	cp -a "$ROOT/opt/bin/libs/vless" "$stage/opt/apps/kvas/bin/libs/vless"
+	cp -a "$ROOT/opt/etc/ndm/ndm" "$stage/opt/apps/kvas/etc/ndm/ndm"
+	cp -a "$ROOT/opt/etc/ndm/ndm" "$stage/opt/apps/kvas/bin/libs/ndm"
+elif [ "$surgical" -eq 1 ]; then
 	# Upgrade-only package: replace only the reviewed KVAS runtime files.
 	mkdir -p "$stage/opt/apps/kvas/bin/libs" "$stage/opt/apps/kvas/etc/ndm"
 	cp -a "$ROOT/opt/bin/libs/vpn" "$stage/opt/apps/kvas/bin/libs/"
@@ -95,7 +116,20 @@ Priority: optional
 Installed-Size: $(du -sk "$stage/opt/apps/kvas" | awk '{print $1}')
 EOF
 
-if [ "$surgical" -eq 1 ]; then
+if [ "$compat_352" -eq 1 ]; then
+	cat > "$control_dir/postinst" <<'EOF'
+#!/bin/sh
+set -e
+
+# Keep the existing router configuration and do not run kvas init during an
+# upgrade. The operator verifies routing and activates Proxy21 separately.
+ln -sf /opt/apps/kvas/bin/kvas /opt/bin/kvas
+chmod -R +x /opt/apps/kvas/bin/* 2>/dev/null || true
+chmod -R +x /opt/apps/kvas/etc/init.d/* 2>/dev/null || true
+chmod -R +x /opt/apps/kvas/etc/ndm/* 2>/dev/null || true
+exit 0
+EOF
+elif [ "$surgical" -eq 1 ]; then
 	cat > "$control_dir/postinst" <<'EOF'
 #!/bin/sh
 set -e

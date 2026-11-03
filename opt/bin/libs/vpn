@@ -33,15 +33,17 @@ CMD_LIST="address prefix name-servers"
 #
 # ------------------------------------------------------------------------------------------
 update_iptables(){
+	local update_status=0
 	ready "${prefix}Очищаем все ранее созданные iptables правила."
 	# возможно чистить цепочки и роутинг — лишнее
-	ip4__flush 'chain table' &>/dev/null && when_ok "УСПЕШНО" || when_bad "ОШИБКА"
+	ip4__flush 'chain table' &>/dev/null && when_ok "УСПЕШНО" || { when_bad "ОШИБКА"; update_status=1; }
 
 	ready "${prefix}Создаем перехват DNS для домашней сети."
-	ip4__dns__add_routing_for_home &> /dev/null && when_ok "УСПЕШНО" || when_bad "ОШИБКА"
+	ip4__dns__add_routing_for_home &> /dev/null && when_ok "УСПЕШНО" || { when_bad "ОШИБКА"; update_status=1; }
 
 	ready "${prefix}Создаем iptables правила."
-	ip4_firewall_set_all_rules &> /dev/null && when_ok "УСПЕШНО" || when_bad "ОШИБКА"
+	ip4_firewall_set_all_rules &> /dev/null && when_ok "УСПЕШНО" || { when_bad "ОШИБКА"; update_status=1; }
+	return "${update_status}"
 }
 
 # ------------------------------------------------------------------------------------------
@@ -2341,10 +2343,10 @@ start_vless(){
 	# то запросим ссылку и создаем его
 	[ -f ${VLESS_CONFIG_FILE} ] || create_vless_config
 	# Если ссылка была пропущена — конфига нет, выходим без ошибки
-	[ -f ${VLESS_CONFIG_FILE} ] || { echo "VLESS не настроен. Выполните: kvas vless new"; return 0; }
+	[ -f ${VLESS_CONFIG_FILE} ] || { echo "VLESS не настроен. Выполните: kvas vless new"; return 1; }
 	grep -q @ ${VLESS_CONFIG_FILE} && create_vless_config
 	# Если после повторного запроса конфига всё нет — пропускаем
-	[ -f ${VLESS_CONFIG_FILE} ] || { echo "VLESS не настроен. Выполните: kvas vless new"; return 0; }
+	[ -f ${VLESS_CONFIG_FILE} ] || { echo "VLESS не настроен. Выполните: kvas vless new"; return 1; }
 	
 	# Проверка конфигурации xray
 	check_xray_config=$(${XRAY} run -test -c ${VLESS_CONFIG_FILE})
@@ -2400,7 +2402,7 @@ switch_vpn_on(){
 			start_vless "${inface_entware}" || return 1
 		else
 			# Если выбран другой VPN интерфейс 
-			vpn_on "${inface_entware}"
+			vpn_on "${inface_entware}" || return 1
 		fi
 	fi
 	[ "${is_install_stage}" = no ] && cmd_kvas_init "no" &> /dev/null

@@ -528,15 +528,21 @@ ip4__main__has_default_route() {
 
 ip4__mark__create_chain() {
 	{
-		if ip4__chain__is_exist "${TABLE_MARK}" "${CHAIN_MARK}" ; then
-			return
-		fi
-
 		# Не включать маркировку, если Keenetic уже потерял основной WAN
 		# default route. Иначе KVAS закрепит аварийное состояние правилами.
 		if ! ip4__main__has_default_route; then
 			error "[${FUNCNAME}] Основной WAN default route отсутствует; маркировка не включается"
 			return 1
+		fi
+
+		# Даже существующая цепочка может быть сиротой после частичного сбоя.
+		# Повторно проверяем таблицу и policy rule перед ранним выходом.
+		if ip4__chain__is_exist "${TABLE_MARK}" "${CHAIN_MARK}" ; then
+			if ! ip4__route__add_table || ! ip4__rule__add_mark_to_table ; then
+				error "[${FUNCNAME}] Существующая цепочка KVAS_MARK не подтверждена"
+				return 1
+			fi
+			return 0
 		fi
 
 		# Не включать маркировку, пока таблица 1001 не подготовлена.
@@ -549,7 +555,11 @@ ip4__mark__create_chain() {
 
 		# т.к. мы начнём маркировать трафик, то заранее
 		# стартанём таблицы для него и повесим правило захвата
-		ip4__rule__add_mark_to_table
+		if ! ip4__rule__add_mark_to_table ; then
+			error "[${FUNCNAME}] Не удалось создать policy rule"
+			ip4__chain__delete "${TABLE_MARK}" "${CHAIN_MARK}"
+			return 1
+		fi
 
 		# Ещё есть 2 варианта цепочки, если проблемы.
 		# Где conntrack NEW лишь на -j MARK, т.е. save-mark всегда.
@@ -1301,9 +1311,11 @@ ip4__rule__add_mark_to_table() {
 	log_warning "Добавление ${submessage}"
 
 	/opt/sbin/ip rule add $(echo "${subrule}") priority "${RULE_PRIORITY}" \
-	 || {
-		error "[${FUNCNAME}] Ошибка при добавлении ${submessage}"
-	}
+		 || {
+			error "[${FUNCNAME}] Ошибка при добавлении ${submessage}"
+			return 1
+		}
+	return 0
 }
 
 ip4__rule__delete_mark_to_table() {

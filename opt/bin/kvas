@@ -290,21 +290,16 @@ case "${1}" in
 						is_install_stage=no
 						_t=$(_ts); echo "[KVAS_SET] $_t is_install_stage=no" >&2; echo "[KVAS_SET] $_t is_install_stage=no" >> "$LOG"
 						
-						# Не даём switch_vpn_on остановить xray (нужен для failover)
-						_XRAY_INIT_SAVE="$XRAY_INIT"
-						XRAY_INIT="/bin/true"
-						_t=$(_ts); echo "[KVAS_SET] $_t XRAY_INIT=/bin/true (предотвращаем остановку xray)" >&2; echo "[KVAS_SET] $_t XRAY_INIT=/bin/true (предотвращаем остановку xray)" >> "$LOG"
-						
 						_s=$(_sec); _t=$(_ts); echo "[KVAS_SET] $_t >>> switch_vpn_on(ent=${iface_ent}, cli=${iface_cli})" >&2; echo "[KVAS_SET] $_t >>> switch_vpn_on(ent=${iface_ent}, cli=${iface_cli})" >> "$LOG"
-						switch_vpn_on "${iface_ent}" "${iface_cli}"
+						if ! switch_vpn_on "${iface_ent}" "${iface_cli}"; then
+							_t=$(_ts); echo "[KVAS_SET] $_t Переключение не прошло; конфигурация не подтверждена" >&2; echo "[KVAS_SET] $_t Переключение не прошло; конфигурация не подтверждена" >> "$LOG"
+							exit 1
+						fi
 						_d=$(( $(_sec) - _s )); _t=$(_ts); echo "[KVAS_SET] $_t <<< switch_vpn_on (${_d}s)" >&2; echo "[KVAS_SET] $_t <<< switch_vpn_on (${_d}s)" >> "$LOG"
-						
-						XRAY_INIT="$_XRAY_INIT_SAVE"
-						_t=$(_ts); echo "[KVAS_SET] $_t XRAY_INIT восстановлен" >&2; echo "[KVAS_SET] $_t XRAY_INIT восстановлен" >> "$LOG"
 						
 						# Убеждаемся что xray запущен (для failover check_vless)
 						_s=$(_sec); _t=$(_ts); echo "[KVAS_SET] $_t >>> service_action S97xray start" >&2; echo "[KVAS_SET] $_t >>> service_action S97xray start" >> "$LOG"
-						service_action S97xray start > /dev/null 2>&1
+						service_action S97xray start > /dev/null 2>&1 || exit 1
 						_d=$(( $(_sec) - _s )); _t=$(_ts); echo "[KVAS_SET] $_t <<< service_action S97xray start (${_d}s)" >&2; echo "[KVAS_SET] $_t <<< service_action S97xray start (${_d}s)" >> "$LOG"
 						sleep 1
 						
@@ -321,7 +316,7 @@ case "${1}" in
 						_d=$(( $(_sec) - _s )); _t=$(_ts); echo "[KVAS_SET] $_t <<< PRIMARY обновлён на $proto (${_d}s)" >&2; echo "[KVAS_SET] $_t <<< PRIMARY обновлён на $proto (${_d}s)" >> "$LOG"
 						
 						_s=$(_sec); _t=$(_ts); echo "[KVAS_SET] $_t >>> update_iptables" >&2; echo "[KVAS_SET] $_t >>> update_iptables" >> "$LOG"
-						update_iptables
+						update_iptables || exit 1
 						_d=$(( $(_sec) - _s )); _t=$(_ts); echo "[KVAS_SET] $_t <<< update_iptables (${_d}s)" >&2; echo "[KVAS_SET] $_t <<< update_iptables (${_d}s)" >> "$LOG"
 						
 						_s=$(_sec); _t=$(_ts); echo "[KVAS_SET] $_t >>> start_failover_daemon" >&2; echo "[KVAS_SET] $_t >>> start_failover_daemon" >> "$LOG"

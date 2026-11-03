@@ -82,8 +82,15 @@ elif [ "$compat_352" -eq 1 ]; then
 	# package-owned files, then overlay only the reviewed safety changes.
 	cp -a "$ROOT/opt/bin/libs/vpn" "$stage/opt/apps/kvas/bin/libs/vpn"
 	cp -a "$ROOT/opt/bin/libs/vless" "$stage/opt/apps/kvas/bin/libs/vless"
+	cp -a "$ROOT/opt/bin/main/check_vpn" "$stage/opt/apps/kvas/bin/main/check_vpn"
 	cp -a "$ROOT/opt/etc/ndm/ndm" "$stage/opt/apps/kvas/etc/ndm/ndm"
 	cp -a "$ROOT/opt/etc/ndm/ndm" "$stage/opt/apps/kvas/bin/libs/ndm"
+	cp -a "$ROOT/opt/etc/ndm/iflayerchanged.d/100-kvas-vpn" \
+		"$stage/opt/apps/kvas/etc/ndm/iflayerchanged.d/100-kvas-vpn"
+	cp -a "$ROOT/opt/etc/ndm/iflayerchanged.d/kvas-ips-reset" \
+		"$stage/opt/apps/kvas/etc/ndm/iflayerchanged.d/kvas-ips-reset"
+	cp -a "$ROOT/opt/etc/ndm/ifstatechanged.d/100-kvas-vpn" \
+		"$stage/opt/apps/kvas/etc/ndm/ifstatechanged.d/100-kvas-vpn"
 elif [ "$surgical" -eq 1 ]; then
 	# Upgrade-only package: replace only the reviewed KVAS runtime files.
 	mkdir -p "$stage/opt/apps/kvas/bin/libs" "$stage/opt/apps/kvas/etc/ndm"

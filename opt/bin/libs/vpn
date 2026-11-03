@@ -2397,7 +2397,7 @@ switch_vpn_on(){
 		
 		# Если выбран proxy vless kvas интерфейс
 		if [ "${cli_inface}" = "${PROXY_VLESS_NAME}" ] ; then
-			start_vless "${inface_entware}"
+			start_vless "${inface_entware}" || return 1
 		else
 			# Если выбран другой VPN интерфейс 
 			vpn_on "${inface_entware}"

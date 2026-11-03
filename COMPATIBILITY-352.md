@@ -1,32 +1,33 @@
-# Compatibility baseline: `1.1.9_beta-10-352`
+# База совместимости: `1.1.9_beta-10-352`
 
-## Comparison
+## Сравнение
 
-The published `kvas_1.1.9_beta-10-352_all.ipk` was extracted locally and
-compared with the imported upstream `main` source.
+Опубликованный пакет `kvas_1.1.9_beta-10-352_all.ipk` был распакован локально
+и сопоставлен с импортированными исходниками upstream-ветки `main`.
 
-- Published package app tree: 65 files.
-- Current upstream `main` app tree: 53 files.
-- The published package contains 11 files absent from current `main`, including
-  backup/restore helpers, the Hysteria helper tree, and the runtime
-  `bin/libs/ndm` copy.
-- Shared files are not byte-identical; `vpn`, `vless`, `ndm`, setup/UI files,
-  and several helpers differ.
-- Published `352` has `RULE_PRIORITY=99` in `etc/ndm/ndm`.
-- Current upstream `main` has `RULE_PRIORITY=1778` in that file.
-- Published `352` still checks VPN readiness through the `state` field and
-  fabricates the `/24` helper route for an interface without `ADDR_MAN`.
-- Published `352` still references `S24xray`; the installed router has a local
-  S97xray compatibility modification that is not part of the published IPK.
+- Дерево приложения опубликованного пакета: 65 файлов.
+- Дерево приложения текущей upstream-ветки `main`: 53 файла.
+- В опубликованном пакете есть 11 файлов, отсутствующих в текущей `main`, в том
+  числе помощники резервного копирования/восстановления, дерево Hysteria и
+  рабочая копия `bin/libs/ndm`.
+- Общие файлы не идентичны побайтно; отличаются `vpn`, `vless`, `ndm`, файлы
+  настройки/UI и несколько вспомогательных компонентов.
+- В опубликованном `352` в `etc/ndm/ndm` используется `RULE_PRIORITY=99`.
+- В текущей upstream-ветке `main` в этом файле используется `RULE_PRIORITY=1778`.
+- Опубликованный `352` проверяет готовность VPN только через поле `state` и
+  создаёт искусственный вспомогательный маршрут `/24` для интерфейса без
+  `ADDR_MAN`.
+- Опубликованный `352` всё ещё ссылается на `S24xray`; на установленном роутере
+  есть локальная совместимостная модификация для `S97xray`, которой нет в IPK.
 
-## Baseline decision
+## Решение по базе
 
-The compatibility branch uses the published `352` app tree as its source
-baseline. This preserves files already present in the installed release and
-avoids silently replacing the router's feature set with the smaller current
-upstream tree. The `main` branch remains available as a reference for later
-forward-porting.
+Ветка совместимости использует дерево приложения опубликованного `352` как
+исходную базу. Это сохраняет файлы, уже присутствующие в установленном релизе,
+и не допускает незаметной замены набора функций роутера на более маленькое
+текущее upstream-дерево. Ветка `main` остаётся доступной как основа для будущего
+переноса изменений вперёд.
 
-Only the reviewed VLESS/KVAS safety changes will be applied on top of this
-baseline. Router-specific S97xray integration remains an explicit compatibility
-patch and is not copied into the upstream reference branch.
+Поверх этой базы будут применяться только проверенные исправления безопасности
+VLESS/KVAS. Специфичная для роутера интеграция с `S97xray` остаётся явным патчем
+совместимости и не переносится в upstream-ветку reference.

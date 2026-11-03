@@ -1,35 +1,40 @@
 # KVAS 1.1.9_beta-10-353
 
-This is a local compatibility release based on the published
-1.1.9_beta-10-352 package, with narrowly scoped safety fixes for the
-VLESS/Proxy21 path. It is not installed on a router by this work.
+Это локальный совместимостный релиз на базе опубликованного пакета
+1.1.9_beta-10-352 с узко сфокусированными исправлениями безопасности для
+сценария VLESS/Proxy21. В рамках этой работы пакет на роутер не устанавливался.
 
-## Changes
+## Изменения
 
-- Keep the beta-10-352 application tree and its RULE_PRIORITY=99 baseline.
-- Require all three Keenetic interface indicators before KVAS enables VPN
-  marking: state=up, link=up, and connected=yes.
-- Stop if KVAS cannot create the routing table or its auxiliary route; do not
-  continue by installing marking rules over an unready table.
-- Do not synthesize the hard-coded /24 helper route for VLESS Proxy21,
-  whose transport interface is a /32 proxy interface.
-- Use the installed router's S97xray service name consistently for VLESS.
-- Keep /opt/etc/ndm/ndm and the runtime libs/ndm source identical so the
-  post-install copy cannot silently restore different behavior.
-- Increment the package release to 353.
+- Сохранено дерево приложения beta-10-352 и его базовое значение
+  `RULE_PRIORITY=99`.
+- Перед включением VPN-маркировки KVAS теперь требует все три признака
+  состояния интерфейса Keenetic: `state=up`, `link=up` и `connected=yes`.
+- При невозможности создать таблицу маршрутизации или вспомогательный маршрут
+  выполнение останавливается; правила маркировки не устанавливаются поверх
+  неготовой таблицы.
+- Для VLESS Proxy21 не создаётся жёстко заданный вспомогательный маршрут `/24`,
+  поскольку транспортный интерфейс прокси использует `/32`.
+- Для VLESS единообразно используется имя службы `S97xray`, установленное на
+  роутере.
+- `/opt/etc/ndm/ndm` и рабочая копия `libs/ndm` синхронизированы, поэтому копия
+  при установке пакета не сможет незаметно вернуть другое поведение.
+- Номер релиза пакета увеличен до 353.
 
-## Deliberate non-changes
+## Что намеренно не менялось
 
-- No router configuration, route, iptables rule, DNS configuration, or VPN
-  selection was changed.
-- No automatic update or deployment mechanism is included.
-- This release does not claim that a VLESS switch is safe until it is tested
-  on the router with an independently verified rollback path.
+- Конфигурация роутера, маршруты, правила iptables, DNS и выбранный VPN не
+  изменялись.
+- Механизм автоматического обновления или развёртывания не добавлялся.
+- Этот релиз не считается безопасным для переключения на VLESS, пока он не
+  будет проверен на роутере с независимо подтверждённым путём отката.
 
-## Main risks
+## Основные риски
 
-The package replaces the KVAS application tree when installed. It must first
-be tested against a router backup and the local S97xray/DNS bridge setup.
-The route-table guard intentionally refuses to enable marking when the
-selected interface is not fully connected; this can leave KVAS on the prior
-working VPN rather than attempting a partial switch.
+При установке пакет заменяет дерево приложения KVAS. Перед установкой его нужно
+проверить с резервной копией роутера и локальной конфигурацией `S97xray`/DNS-
+посредника.
+
+Защита таблицы маршрутизации намеренно отказывается включать маркировку, если
+выбранный интерфейс подключён не полностью. В таком случае KVAS может оставить
+предыдущий рабочий VPN вместо попытки выполнить частичное переключение.

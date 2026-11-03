@@ -1,38 +1,41 @@
 # Manual rollback plan for KVAS 353
 
-This is a reviewed manual procedure for a future router deployment. It is not
-executed by the build or test scripts.
+Это проверенная ручная процедура для будущего развёртывания на роутере. Скрипты
+сборки и тестирования её не выполняют.
 
-## Before deployment
+## Перед развёртыванием
 
-1. Keep the current working OpenVPN selected as the fallback.
-2. Save the router's current KVAS, Xray, DNS bridge, hook, and rescue files in
-   a new timestamped backup outside the package staging directory.
-3. Copy the known-good beta-10-352 IPK to the router and verify its checksum.
-4. Confirm that console or an independent LAN access path is available. Do
-   not rely on the VLESS path for recovery.
-5. Record the current WAN interface/default route and confirm direct internet
-   access before installing anything.
+1. Оставить текущий рабочий OpenVPN выбранным в качестве резервного.
+2. Сохранить текущие файлы KVAS, Xray, DNS-посредника, обработчиков и rescue с
+   роутера в новую резервную копию с временной меткой, вне каталога подготовки
+   пакета.
+3. Скопировать на роутер заведомо рабочий IPK beta-10-352 и проверить его
+   контрольную сумму.
+4. Убедиться, что доступна консоль или независимый путь доступа из LAN. Не
+   полагаться на VLESS как на канал восстановления.
+5. Записать текущие WAN-интерфейс и default route, затем проверить прямой
+   доступ в интернет до установки.
 
-## If the new package fails
+## Если новый пакет работает неправильно
 
-Do not switch VPNs repeatedly. From a local console or independent SSH path:
+Не переключать VPN многократно. Из локальной консоли или по независимому SSH:
 
 opkg install /opt/tmp/kvas_1.1.9_beta-10-352_all.ipk
 
-Then restore the locally customized S97xray references and any files saved
-in the pre-deployment backup, restart only the affected KVAS/Xray service, and
-verify direct WAN access, DNS, and the existing OpenVPN. If the route table is
-missing and the saved WAN gateway/interface still match the live connection,
-use the existing local rescue procedure rather than inventing a new route.
+Затем восстановить локальные ссылки на `S97xray` и файлы из резервной копии,
+сделанной перед развёртыванием, перезапустить только затронутую службу KVAS/Xray
+и проверить прямой WAN-доступ, DNS и существующий OpenVPN. Если таблица
+маршрутизации отсутствует, а сохранённые WAN-шлюз и интерфейс по-прежнему
+соответствуют текущему подключению, использовать существующую rescue-процедуру,
+а не придумывать новый маршрут.
 
-## Stop conditions
+## Условия немедленной остановки
 
-Stop and use the independent recovery path if the main default route changes,
-the gateway becomes unreachable, LAN DNS fails, or SSH/web access is lost.
-Do not flush all routes or iptables rules. Do not delete Proxy21 as a first
-response.
+Остановиться и использовать независимый путь восстановления, если изменился
+основной default route, шлюз перестал быть доступен, отказал DNS в LAN или
+потерян доступ по SSH/веб-интерфейсу. Не выполнять очистку всех маршрутов или
+правил iptables. Не удалять Proxy21 в качестве первой реакции.
 
-The exact package diff can be reviewed with:
+Точный diff пакета можно просмотреть командой:
 
 git diff dce04b4..HEAD -- Makefile opt tests RELEASE-353-CHANGELOG.md RELEASE-353-ROLLBACK.md

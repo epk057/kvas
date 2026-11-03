@@ -1,29 +1,31 @@
-# Local KVAS IPK build
+# Локальная сборка IPK KVAS
 
-The repository contains an upstream OpenWrt/Entware `Makefile` and a Jenkins
-pipeline, but the pipeline is tied to the original Jenkins installation and
-contains router-copy/test stages. For local, router-independent builds use the
-scripts in `tools/`.
+В репозитории есть upstream-`Makefile` OpenWrt/Entware и pipeline Jenkins, но
+pipeline привязан к исходной установке Jenkins и содержит этапы копирования на
+роутер и тестирования. Для локальной сборки, не зависящей от роутера, используйте
+скрипты из `tools/`.
 
-## Build
+## Сборка
 
-From the repository root:
+Из корня репозитория:
 
 ```sh
 ./tools/build-ipk.sh
-./tools/verify-ipk.sh dist/kvas_1.1.9_beta-10-25_all.ipk
+./tools/verify-ipk.sh dist/kvas_1.1.9_beta-10-353_all.ipk
 ```
 
-The version and release default to `PKG_VERSION` and `PKG_RELEASE` in the
-Makefile. Override them without editing source files:
+Версия и номер релиза по умолчанию берутся из `PKG_VERSION` и `PKG_RELEASE` в
+`Makefile`. Их можно переопределить без изменения исходных файлов:
 
 ```sh
 ./tools/build-ipk.sh --release 353
 ```
 
-The output is an Entware-style gzip-wrapped IPK containing `debian-binary`,
-`control.tar.gz`, and `data.tar.gz`. The package is `Architecture: all`; no
-MIPS compiler is needed because KVAS consists of shell scripts and data files.
+Результатом является IPK в формате Entware, упакованный gzip и содержащий
+`debian-binary`, `control.tar.gz` и `data.tar.gz`. Пакет имеет
+`Architecture: all`; компилятор MIPS не требуется, поскольку KVAS состоит из
+shell-скриптов и файлов данных.
 
-The builder mirrors `Package/kvas/install` from the Makefile. It does not copy
-anything to a router, run `opkg`, restart services, or execute package hooks.
+Сборщик повторяет логику `Package/kvas/install` из `Makefile`. Он ничего не
+копирует на роутер, не запускает `opkg`, не перезапускает службы и не выполняет
+package hooks.

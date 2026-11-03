@@ -217,7 +217,7 @@ all_services_restart() {
 	elif is_vless_over_proxy_enabled ; then
 		log_warning 'Перезапуск клиента VLESS'
 
-		service_restart 'клиент VLESS' 'S24xray'
+		service_restart 'клиент VLESS' 'S97xray'
 	fi
 }
 
@@ -1665,17 +1665,19 @@ vpn_on() {
 		fi
 		sleep 2
 #		connected=$(get_value_interface_field "${inface_cli}" connected)
-		connected=$(get_value_interface_field "${inface_cli}" state)
+		state=$(get_value_interface_field "${inface_cli}" state)
+		link=$(get_value_interface_field "${inface_cli}" link)
+		connected=$(get_value_interface_field "${inface_cli}" connected)
 
 #		if [ "${connected}" = 'no' ]; then
-		if [ "${connected}" = 'down' ]; then
+		if [ "${state}" != 'up' ] || [ "${link}" != 'up' ] || [ "${connected}" != 'yes' ]; then
 
 			when_bad "ОШИБКА"
 			error "Возникла ошибка при подключении интерфейса ${inface_entware}!"
 			error "Проверьте доступность сервера и настройки клиента!"
 			exit 1
 		else
-			update_iptables
+			update_iptables || exit 1
 		fi
 	} 1> /dev/null 2> "${ERROR_LOG_FILE}"
 	ready_status "${?}" "Возникла ошибка при подключении VPN соединения [${inface_cli_desc}]" "УСПЕШНО"

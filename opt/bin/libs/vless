@@ -21,7 +21,7 @@
 . /opt/apps/kvas/bin/libs/main
 
 XRAY=/opt/sbin/xray
-XRAY_INIT=/opt/etc/init.d/S24xray
+XRAY_INIT=/opt/etc/init.d/S97xray
 
 VLESS_CONFIG_FILE=/opt/etc/xray/kvas.json
 VLESS_CONFIG_ORIGINAL_FILE=/opt/apps/kvas/etc/conf/kvas.vless

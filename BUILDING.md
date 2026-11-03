@@ -21,6 +21,17 @@ pipeline привязан к исходной установке Jenkins и со
 ./tools/build-ipk.sh --release 353
 ```
 
+Для обновления существующей установки используйте хирургический пакет:
+
+```sh
+./tools/build-ipk.sh --surgical
+./tools/verify-safety-ipk.sh dist/kvas_1.1.9_beta-10-353_all.ipk
+```
+
+Хирургический пакет содержит только исправленные `vpn`, `vless` и обе копии
+`ndm`. Он не содержит `kvas.conf`, `kvas.list`, глобальные хуки, DNS-файлы или
+другие компоненты установки.
+
 Результатом является IPK в формате Entware, упакованный gzip и содержащий
 `debian-binary`, `control.tar.gz` и `data.tar.gz`. Пакет имеет
 `Architecture: all`; компилятор MIPS не требуется, поскольку KVAS состоит из

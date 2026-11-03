@@ -20,7 +20,7 @@ grep -Fq 'XRAY_INIT=/opt/etc/init.d/S97xray' "$ROOT/opt/bin/libs/vless"
 ! grep -Fq "service_restart 'клиент VLESS' 'S24xray'" "$ROOT/opt/bin/libs/vpn"
 grep -Fq 'RULE_PRIORITY=99' "$ROOT/opt/etc/ndm/ndm"
 
-ipk=$("$ROOT/tools/build-ipk.sh" --output "$TMP")
-"$ROOT/tools/verify-ipk.sh" "$ipk"
+ipk=$("$ROOT/tools/build-ipk.sh" --surgical --output "$TMP")
+"$ROOT/tools/verify-safety-ipk.sh" "$ipk"
 
 printf '%s\n' 'OK: проверки безопасности VLESS и сборки IPK пройдены'

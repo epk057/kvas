@@ -522,16 +522,19 @@ ip4__shadowsocks__create_chain() {
 	ip4__dnat_to_port__create_chain "${TABLE_DNAT_TO_PORT}" "${CHAIN_DNAT_TO_PORT}" "${local_port}"
 }
 
-ip4__main__has_default_route() {
-	/opt/sbin/ip route show table main 2>/dev/null | grep -q '^default[[:space:]]'
+ip4__wan_route_is_ready() {
+	# Keenetic может держать WAN default route в policy table, а не в main.
+	# Проверяем фактический результат policy routing, не конкретную таблицу.
+	/opt/sbin/ip route get 1.1.1.1 >/dev/null 2>&1
 }
 
 ip4__mark__create_chain() {
 	{
-		# Не включать маркировку, если Keenetic уже потерял основной WAN
-		# default route. Иначе KVAS закрепит аварийное состояние правилами.
-		if ! ip4__main__has_default_route; then
-			error "[${FUNCNAME}] Основной WAN default route отсутствует; маркировка не включается"
+		# Не включать маркировку, если фактическая WAN-маршрутизация недоступна.
+		# Проверяем policy routing, поскольку Keenetic может не держать default
+		# route в main table.
+		if ! ip4__wan_route_is_ready; then
+			error "[${FUNCNAME}] Фактический WAN route недоступен; маркировка не включается"
 			return 1
 		fi
 

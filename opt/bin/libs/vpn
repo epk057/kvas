@@ -2451,10 +2451,10 @@ start_vless(){
 			vless_fail_closed 'не удалось подготовить Proxy21 и правила маршрутизации'
 			return 1
 		}
-		# connected=yes у Proxy21 не подтверждает работоспособность VLESS.
-		# Требуем реальный HTTPS-запрос через виртуальный интерфейс.
-		test_vless_proxy "${_inface_entware}" >/dev/null 2>&1 || {
-			vless_fail_closed 'проверочный HTTPS-запрос через Proxy21 не прошёл'
+		# SOCKS5/Xray и состояние Proxy21 проверяются внутри функции; прямой
+		# curl через t2s21 остаётся только диагностикой и не блокирует активацию.
+		test_vless_proxy "${_inface_entware}" || {
+			vless_fail_closed 'обязательная проверка Proxy21 или SOCKS5 не прошла'
 			return 1
 		}
 		

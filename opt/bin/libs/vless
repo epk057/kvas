@@ -586,23 +586,23 @@ test_vless_proxy() {
 #
 #-------------------------------------------------------------------------------
     local _inface=${1}
-    # iface=$(ip a | grep global | grep t2s_br${PROXY_INFACE_NUMEBER} | sed 's/.*\(t2s_br'${PROXY_INFACE_NUMEBER}'\)/\1/g')
-    ready "Проверка соединения \"${PROXY_VLESS_DESC}\" к ${DOMAIN_FOR_CHECK}"
     local _out
     local _socks_out
     local _status=0
-    _out=$(curl -4 -sS --fail --connect-timeout 10 --max-time 30 \
-        --interface "${_inface}" "${DOMAIN_FOR_CHECK}" 2>&1)
-    if echo "${_out}" | tail -n 1 | grep -qE "${IP_FILTER}" ; then
+
+    # Proxy21 — это Keenetic proxy-интерфейс, а не обычный point-to-point
+    # интерфейс. Локальный curl --interface t2s21 не воспроизводит путь LAN
+    # через fwmark и поэтому не может быть обязательным критерием VLESS.
+    ready "Проверка состояния ${PROXY_VLESS_NAME}"
+    _out=$(ndmc -c "show interface ${PROXY_VLESS_NAME}" 2>&1)
+    if echo "${_out}" | grep -q 'link: up' \
+        && echo "${_out}" | grep -q 'connected: yes' \
+        && echo "${_out}" | grep -q 'state: up'; then
         when_ok "УСПЕШНО"
     else
         when_bad "ОШИБКА"
         _status=1
-        [ -n "${_out}" ] && {
-            print_line
-            echo "${_out}" && echo
-        }
-        
+        log_error "VLESS: Proxy21 не готов: $(echo "${_out}" | tr '\n' ' ')"
     fi
 
     ready "Проверка SOCKS5 127.0.0.1:${PROXY_VLESS_PORT}"
@@ -618,6 +618,19 @@ test_vless_proxy() {
             print_line
             echo "${_socks_out}" && echo
         }
+    fi
+
+    # Отдельная диагностика пути через t2s21. Ошибка здесь не отменяет
+    # активацию: фактический клиентский путь проверяется после включения
+    # KVAS-маркировки, а рабочим локальным транспортом является SOCKS5.
+    ready "Диагностика прямого пути ${_inface}"
+    _out=$(curl -4 -sS --fail --connect-timeout 3 --max-time 8 \
+        --interface "${_inface}" "${DOMAIN_FOR_CHECK}" 2>&1)
+    if echo "${_out}" | tail -n 1 | grep -qE "${IP_FILTER}" ; then
+        when_ok "УСПЕШНО"
+    else
+        when_alert "ПРЕДУПРЕЖДЕНИЕ"
+        log_error "VLESS: прямой тест через ${_inface} не прошёл (диагностический): ${_out}"
     fi
     return "${_status}"
 }

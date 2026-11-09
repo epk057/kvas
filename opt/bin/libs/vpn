@@ -61,7 +61,19 @@ prepare_vless_rollback() {
 		log_error 'VLESS: нет безопасного предыдущего интерфейса для ручного отката'
 		return 1
 	fi
-	case "${old_cli}|${old_ent}|${old_addr}" in
+	case "${old_cli}" in
+		*[!A-Za-z0-9_.:+/-]*)
+			log_error 'VLESS: небезопасные символы в состоянии ручного отката'
+			return 1
+		;;
+	esac
+	case "${old_ent}" in
+		*[!A-Za-z0-9_.:+/-]*)
+			log_error 'VLESS: небезопасные символы в состоянии ручного отката'
+			return 1
+		;;
+	esac
+	case "${old_addr}" in
 		*[!A-Za-z0-9_.:+/-]*)
 			log_error 'VLESS: небезопасные символы в состоянии ручного отката'
 			return 1

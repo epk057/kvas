@@ -588,18 +588,38 @@ test_vless_proxy() {
     local _inface=${1}
     # iface=$(ip a | grep global | grep t2s_br${PROXY_INFACE_NUMEBER} | sed 's/.*\(t2s_br'${PROXY_INFACE_NUMEBER}'\)/\1/g')
     ready "Проверка соединения \"${PROXY_VLESS_DESC}\" к ${DOMAIN_FOR_CHECK}"
-    local _out=$(curl -4 -sS --fail --connect-timeout 10 --max-time 30 \
+    local _out
+    local _socks_out
+    local _status=0
+    _out=$(curl -4 -sS --fail --connect-timeout 10 --max-time 30 \
         --interface "${_inface}" "${DOMAIN_FOR_CHECK}" 2>&1)
     if echo "${_out}" | tail -n 1 | grep -qE "${IP_FILTER}" ; then
         when_ok "УСПЕШНО"
     else
         when_bad "ОШИБКА"
+        _status=1
         [ -n "${_out}" ] && {
             print_line
             echo "${_out}" && echo
         }
         
     fi
+
+    ready "Проверка SOCKS5 127.0.0.1:${PROXY_VLESS_PORT}"
+    _socks_out=$(curl -4 -sS --fail --connect-timeout 5 --max-time 15 \
+        --socks5-hostname "${LOCALHOST_IP}:${PROXY_VLESS_PORT}" \
+        "${DOMAIN_FOR_CHECK}" 2>&1)
+    if echo "${_socks_out}" | tail -n 1 | grep -qE "${IP_FILTER}" ; then
+        when_ok "УСПЕШНО"
+    else
+        when_bad "ОШИБКА"
+        _status=1
+        [ -n "${_socks_out}" ] && {
+            print_line
+            echo "${_socks_out}" && echo
+        }
+    fi
+    return "${_status}"
 }
 
 _cmd_install_vless_proxy(){

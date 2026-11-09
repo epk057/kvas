@@ -1746,7 +1746,11 @@ vpn_on() {
 		state=$(get_value_interface_field "${inface_cli}" state)
 
 		if [ "${state}" = 'down' ]; then
-			curl -s -d '{"up":"true"}' "${INFACE_PART_REQUEST}/${inface_cli}" &> /dev/null
+			if ! curl -sS --connect-timeout 3 --max-time 15 \
+				-d '{"up":"true"}' "${INFACE_PART_REQUEST}/${inface_cli}" &> /dev/null; then
+				error "Не удалось поднять интерфейс ${inface_cli} через RCI в установленный timeout"
+				return 1
+			fi
 		fi
 		sleep 2
 #		connected=$(get_value_interface_field "${inface_cli}" connected)

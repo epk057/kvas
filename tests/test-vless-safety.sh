@@ -51,6 +51,8 @@ grep -Fq 'Повторный cmd_kvas_init здесь перезапускает
 grep -Fq 'echo "[${_ts}] ${1}"' "$ROOT/opt/bin/libs/main"
 grep -Fq 'ip4__wan_route_is_ready' "$ROOT/opt/etc/ndm/ndm"
 grep -Fq 'Фактический WAN route недоступен' "$ROOT/opt/etc/ndm/ndm"
+grep -Fq 'attempt=1' "$ROOT/opt/etc/ndm/ndm"
+grep -Fq 'sleep 1' "$ROOT/opt/etc/ndm/ndm"
 grep -Fq 'Нет mapping для' "$ROOT/opt/bin/kvas"
 grep -Fq 'failover_mapping' "$ROOT/opt/bin/libs/failover"
 grep -Fq 'Не вмешиваться в вручную выбранный OpenVPN' "$ROOT/opt/bin/libs/failover"

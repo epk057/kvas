@@ -525,7 +525,15 @@ ip4__shadowsocks__create_chain() {
 ip4__wan_route_is_ready() {
 	# Keenetic может держать WAN default route в policy table, а не в main.
 	# Проверяем фактический результат policy routing, не конкретную таблицу.
-	/opt/sbin/ip route get 1.1.1.1 >/dev/null 2>&1
+	# При переключении VPN NDM может на короткое время перестраивать policy
+	# rules. Ждём восстановления фактического WAN-маршрута, не изменяя main.
+	local attempt=1
+	while [ "${attempt}" -le 15 ]; do
+		/opt/sbin/ip route get 1.1.1.1 >/dev/null 2>&1 && return 0
+		sleep 1
+		attempt=$((attempt + 1))
+	done
+	return 1
 }
 
 ip4__mark__create_chain() {

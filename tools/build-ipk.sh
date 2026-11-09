@@ -93,6 +93,9 @@ elif [ "$compat_352" -eq 1 ]; then
 		"$stage/opt/apps/kvas/etc/ndm/iflayerchanged.d/kvas-ips-reset"
 	cp -a "$ROOT/opt/etc/ndm/ifstatechanged.d/100-kvas-vpn" \
 		"$stage/opt/apps/kvas/etc/ndm/ifstatechanged.d/100-kvas-vpn"
+	mkdir -p "$stage/opt/apps/kvas/rescue"
+	cp -a "$ROOT/opt/apps/kvas/rescue/kvas-vless-rollback.sh" \
+		"$stage/opt/apps/kvas/rescue/kvas-vless-rollback.sh"
 elif [ "$surgical" -eq 1 ]; then
 	# Upgrade-only package: replace only the reviewed KVAS runtime files.
 	mkdir -p "$stage/opt/apps/kvas/bin/libs" "$stage/opt/apps/kvas/etc/ndm"

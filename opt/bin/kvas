@@ -292,6 +292,7 @@ case "${1}" in
 						_d=$(( $(_sec) - _s )); _t=$(_ts); echo "[KVAS_SET] $_t <<< stop_failover_daemon (${_d}s)" >&2; echo "[KVAS_SET] $_t <<< stop_failover_daemon (${_d}s)" >> "$LOG"
 						
 						is_install_stage=no
+						KVAS_SET_SWITCH=yes
 						_t=$(_ts); echo "[KVAS_SET] $_t is_install_stage=no" >&2; echo "[KVAS_SET] $_t is_install_stage=no" >> "$LOG"
 						
 						_s=$(_sec); _t=$(_ts); echo "[KVAS_SET] $_t >>> switch_vpn_on(ent=${iface_ent}, cli=${iface_cli})" >&2; echo "[KVAS_SET] $_t >>> switch_vpn_on(ent=${iface_ent}, cli=${iface_cli})" >> "$LOG"

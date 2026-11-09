@@ -2496,7 +2496,11 @@ switch_vpn_on(){
 			vpn_on "${inface_entware}" || return 1
 		fi
 	fi
-	[ "${is_install_stage}" = no ] && cmd_kvas_init "no" &> /dev/null
+	# При явном `kvas vpn set` внешний обработчик сам применяет update_iptables.
+	# Повторный cmd_kvas_init здесь перезапускает Xray и запускает цикл VLESS.
+	if [ "${is_install_stage}" = no ] && [ "${KVAS_SET_SWITCH:-no}" != yes ]; then
+		cmd_kvas_init "no" &> /dev/null
+	fi
 
 	#------------------------------------------------------
 	# Если есть подключенные гостевые сети

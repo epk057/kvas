@@ -34,6 +34,8 @@ grep -Fq 'Переключение не прошло; конфигурация �
 grep -Fq 'prepare_vless_rollback' "$ROOT/opt/bin/libs/vpn"
 grep -Fq 'vless_fail_closed' "$ROOT/opt/bin/libs/vpn"
 grep -Fq 'Автоматический откат не выполнялся' "$ROOT/opt/bin/libs/vpn"
+grep -Fq -- '--connect-timeout 10 --max-time 30' "$ROOT/opt/bin/libs/vless"
+! grep -Fq 'service_action S97xray start' "$ROOT/opt/bin/kvas"
 grep -Fq 'switch_vpn_on' "$ROOT/opt/apps/kvas/rescue/kvas-vless-rollback.sh"
 sh -n "$ROOT/opt/apps/kvas/rescue/kvas-vless-rollback.sh"
 test -x "$ROOT/opt/apps/kvas/rescue/kvas-vless-rollback.sh"

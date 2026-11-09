@@ -301,12 +301,6 @@ case "${1}" in
 						fi
 						_d=$(( $(_sec) - _s )); _t=$(_ts); echo "[KVAS_SET] $_t <<< switch_vpn_on (${_d}s)" >&2; echo "[KVAS_SET] $_t <<< switch_vpn_on (${_d}s)" >> "$LOG"
 						
-						# Убеждаемся что xray запущен (для failover check_vless)
-						_s=$(_sec); _t=$(_ts); echo "[KVAS_SET] $_t >>> service_action S97xray start" >&2; echo "[KVAS_SET] $_t >>> service_action S97xray start" >> "$LOG"
-						service_action S97xray start > /dev/null 2>&1 || exit 1
-						_d=$(( $(_sec) - _s )); _t=$(_ts); echo "[KVAS_SET] $_t <<< service_action S97xray start (${_d}s)" >&2; echo "[KVAS_SET] $_t <<< service_action S97xray start (${_d}s)" >> "$LOG"
-						sleep 1
-						
 						if [ "$proto" = "hysteria" ]; then
 							_s=$(_sec); _t=$(_ts); echo "[KVAS_SET] $_t >>> service_action S99hysteria start" >&2; echo "[KVAS_SET] $_t >>> service_action S99hysteria start" >> "$LOG"
 							service_action S99hysteria start > /dev/null 2>&1

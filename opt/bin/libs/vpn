@@ -121,7 +121,17 @@ EOF
 
 vless_fail_closed() {
 	local reason="${1:-неизвестная ошибка}"
+	local failed_ent
+	failed_ent=$(get_config_value INFACE_ENT 2>/dev/null || true)
 	[ -x "${XRAY_INIT}" ] && "${XRAY_INIT}" stop >/dev/null 2>&1
+	# После неудачного запуска Xray нельзя оставлять policy rule 99 и
+	# default через t2s21: это превращает частичный VLESS-сбой в blackhole
+	# для KVAS_LIST. Удаляем только VLESS-специфичный маршрут и rule, не
+	# затрагивая main table, WAN policy Keenetic или DNS-цепочки.
+	if [ -n "${failed_ent}" ] && [ "${failed_ent}" != "${SSR_ENTWARE_TEMPL}" ]; then
+		/opt/sbin/ip route del default dev "${failed_ent}" table 1001 >/dev/null 2>&1 || true
+	fi
+	/opt/sbin/ip rule del priority 99 >/dev/null 2>&1 || true
 	log_error "VLESS: активация остановлена в fail-closed режиме: ${reason}"
 	echo "VLESS не активирован: ${reason}"
 	echo "Автоматический откат не выполнялся. Ручной план: ${VLESS_ROLLBACK_PLAN}"

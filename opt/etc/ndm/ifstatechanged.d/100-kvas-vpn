@@ -38,7 +38,7 @@ if [ "${1}" = "hook" ] && [ "${change}" = "link" ] ; then
 			;;
 			"yes-up-up" )
 				if is_vless_over_proxy_enabled; then
-					logger -t "КВАС" "Соединение ${id} установлено; повторный link_reboot VLESS запрещён."
+					logger -t "КВАС" "Соединение ${id} установлено; повторный link_reboot и пересборка KVAS-правил для VLESS запрещены."
 				else
 					link_reboot &> /dev/null
 					logger -t "КВАС"  "Соединение ${id} установлено. Правила и таблицы пересозданы."

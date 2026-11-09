@@ -22,7 +22,11 @@ if [ "${1}" = "hook" ] && echo "${id}" | grep -q "${cli_inface}"; then
 
 #		Запускаем обработку при поднятии соединения
 		"ctrl-running")
-			cmd_vpn_iptable_reset &> /dev/null
+			if is_vless_over_proxy_enabled; then
+				logger -t "КВАС" "Соединение ${id} установлено; пересборка KVAS-правил для VLESS пропущена."
+			else
+				cmd_vpn_iptable_reset &> /dev/null
+			fi
 #			link_up &> /dev/null
 			logger -t "КВАС"  "Соединение ${id} успешно подключено."
 		;;

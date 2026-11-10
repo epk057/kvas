@@ -40,9 +40,11 @@ else
 fi
 
 /opt/etc/init.d/S97xray stop >/dev/null 2>&1 || true
-is_install_stage=rollback
 
-if ! switch_vpn_on "${OLD_INFACE_ENT}" "${OLD_INFACE_CLI}"; then
+# switch_vpn_on повторно проходит ветку переключения и на некоторых версиях
+# KVAS оставляет table 1001 пустой после fail-closed. Здесь состояние уже
+# сохранено и Xray остановлен, поэтому используем прямой проверенный путь.
+if ! vpn_on "${OLD_INFACE_ENT}"; then
 	echo "Не удалось восстановить ${OLD_INFACE_CLI}/${OLD_INFACE_ENT}" >&2
 	echo "Проверьте WAN и используйте штатный rescue netfix при необходимости." >&2
 	exit 1

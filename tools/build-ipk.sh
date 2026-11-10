@@ -85,6 +85,7 @@ elif [ "$compat_352" -eq 1 ]; then
 	cp -a "$ROOT/opt/bin/kvas" "$stage/opt/apps/kvas/bin/kvas"
 	cp -a "$ROOT/opt/bin/libs/failover" "$stage/opt/apps/kvas/bin/libs/failover"
 	cp -a "$ROOT/opt/bin/main/check_vpn" "$stage/opt/apps/kvas/bin/main/check_vpn"
+	cp -a "$ROOT/opt/etc/init.d/S97xray" "$stage/opt/apps/kvas/etc/init.d/S97xray"
 	cp -a "$ROOT/opt/etc/ndm/ndm" "$stage/opt/apps/kvas/etc/ndm/ndm"
 	cp -a "$ROOT/opt/etc/ndm/ndm" "$stage/opt/apps/kvas/bin/libs/ndm"
 	cp -a "$ROOT/opt/etc/ndm/iflayerchanged.d/100-kvas-vpn" \

@@ -2481,27 +2481,36 @@ start_vless(){
 	if echo "${check_xray_config}" | grep -q "Configuration OK" ; then
 
 		# Запуск xray в случае, если конфигурация xray не содержит ошибок
+		: > "${XRAY_TRACE_FILE}"
+		xray_trace "before-service-action"
 		ready "Запускаем xray сервис..."
 		service_action S97xray start && when_ok "УСПЕШНО" || {
+			xray_trace "service-action-failed"
 			when_bad "ОШИБКА"
 			vless_fail_closed 'не удалось запустить S97xray'
 			return 1
 		}
-		if ! xray_runtime_ready; then
+		xray_trace "after-service-action"
+		if ! xray_wait_runtime_ready 12; then
 			when_bad "ОШИБКА"
 			vless_fail_closed 'S97xray завершился или не открыл SOCKS-порт 1097'
 			return 1
 		fi
+		xray_trace "before-vpn-on"
 		vpn_on "${_inface_entware}" &> /dev/null || {
+			xray_trace "vpn-on-failed"
 			vless_fail_closed 'не удалось подготовить Proxy21 и правила маршрутизации'
 			return 1
 		}
+		xray_trace "after-vpn-on"
 		# SOCKS5/Xray и состояние Proxy21 проверяются внутри функции; прямой
 		# curl через t2s21 остаётся только диагностикой и не блокирует активацию.
 		test_vless_proxy "${_inface_entware}" || {
+			xray_trace "test-vless-failed"
 			vless_fail_closed 'обязательная проверка Proxy21 или SOCKS5 не прошла'
 			return 1
 		}
+		xray_trace "vless-start-ok"
 		
 	else
 		# В случае, если есть ошибки в файле конфигурации, выводим их в консоль

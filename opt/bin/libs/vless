@@ -30,6 +30,32 @@ VLESS_CONFIG_FILE_BACKUP=${KVAS_BACKUP_PATH}/kvas.json
 PROXY_VLESS_DESC="Kvas-proxy-vless"
 PROXY_LOCAL_IP="127.0.0.1"
 PROXY_VLESS_PORT=1097
+XRAY_TRACE_FILE=/tmp/kvas-xray-trace.log
+
+xray_trace() {
+    printf '%s source=kvas phase=%s pid=%s port1097=%s\n' \
+        "$(date '+%Y-%m-%dT%H:%M:%S%z')" \
+        "${1:-unknown}" \
+        "$(pidof xray 2>/dev/null || true)" \
+        "$(netstat -ln 2>/dev/null | grep -c '127.0.0.1:1097')" \
+        >> "${XRAY_TRACE_FILE}" 2>/dev/null || true
+}
+
+xray_wait_runtime_ready() {
+    local _attempt=0
+    local _limit=${1:-12}
+    while [ "${_attempt}" -le "${_limit}" ]; do
+        xray_trace "ready-${_attempt}"
+        if xray_runtime_ready; then
+            xray_trace "ready-ok-${_attempt}"
+            return 0
+        fi
+        sleep 1
+        _attempt=$(( _attempt + 1 ))
+    done
+    xray_trace "ready-timeout"
+    return 1
+}
 
 xray_runtime_ready() {
 #-------------------------------------------------------------------------------

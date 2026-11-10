@@ -7,4 +7,12 @@ PREARGS=""
 DESC=$PROCS
 PATH=/opt/sbin:/opt/bin:/opt/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
+# Техническая трассировка жизненного цикла Xray. Секреты конфигурации сюда
+# не попадают; файл находится в /tmp и очищается при перезагрузке роутера.
+XRAY_TRACE_FILE=/tmp/kvas-xray-trace.log
+XRAY_TRACE_PRECMD="printf '%s action=%s phase=pre pid=%s port1097=%s\\n' \"\\$(date '+%Y-%m-%dT%H:%M:%S%z')\" \"\\${ACTION:-start}\" \"\\$(pidof xray 2>/dev/null)\" \"\\$(netstat -ln 2>/dev/null | grep -c '127.0.0.1:1097')\" >> \"${XRAY_TRACE_FILE}\""
+XRAY_TRACE_POSTCMD="printf '%s action=%s phase=post pid=%s port1097=%s\\n' \"\\$(date '+%Y-%m-%dT%H:%M:%S%z')\" \"\\${ACTION:-start}\" \"\\$(pidof xray 2>/dev/null)\" \"\\$(netstat -ln 2>/dev/null | grep -c '127.0.0.1:1097')\" >> \"${XRAY_TRACE_FILE}\""
+PRECMD="${XRAY_TRACE_PRECMD}"
+POSTCMD="${XRAY_TRACE_POSTCMD}"
+
 . /opt/etc/init.d/rc.func

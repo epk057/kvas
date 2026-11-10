@@ -985,6 +985,33 @@ ip4_mark_vpn_network() {
 	} &>/dev/null
 }
 
+# Для VLESS NDM может вызвать netfilter-hook уже после того, как Keenetic
+# перевёл Proxy21 в переходное или отключённое состояние. В таком случае
+# нельзя заново создавать table 1001/rule 99 через недействующий t2s21.
+# Один RCI-снимок намеренно заменяет три вызова get_value_interface_field:
+# каждый из них содержит sleep 1.
+ip4__vless_proxy_is_ready() {
+	local tunnel_keenetic_name
+	local state_snapshot
+
+	tunnel_keenetic_name=$(get_config_value 'INFACE_CLI')
+	[ "${tunnel_keenetic_name}" = "${PROXY_VLESS_NAME}" ] || return 0
+
+	state_snapshot=$(curl -s --connect-timeout 2 --max-time 4 "${INFACE_REQUEST}" 2>/dev/null | \
+		jq -r '.[] | select(.id=="'"${PROXY_VLESS_NAME}"'") | [.state,.link,.connected] | join(" ")' 2>/dev/null)
+
+	[ "${state_snapshot}" = "up up yes" ]
+}
+
+ip4__vless_policy_clear() {
+	local net_interface
+	net_interface=$(get_config_value 'INFACE_ENT')
+
+	[ -n "${net_interface}" ] && \
+		/opt/sbin/ip route del default dev "${net_interface}" table "${ROUTE_TABLE_ID}" 2>/dev/null || true
+	/opt/sbin/ip rule del priority "${RULE_PRIORITY}" 2>/dev/null || true
+}
+
 ip4_firewall_set_all_rules() {
 	local rules_lock=/opt/tmp/kvas-rules.lock
 	local lock_pid=''
@@ -1010,7 +1037,17 @@ ip4_firewall_set_all_rules() {
 		#ToDo: сделать home отключаемой
 		ip4__shadowsocks__add_routing_for_home &> /dev/null
 	else
-		ip4_mark_vpn_network || rules_status=1
+		if ! ip4__vless_proxy_is_ready ; then
+			if is_vless_over_proxy_enabled ; then
+				log_warning 'VLESS: Proxy21 не готов; table 1001 и rule 99 не восстанавливаются'
+				ip4__vless_policy_clear
+				rules_status=1
+			else
+				ip4_mark_vpn_network || rules_status=1
+			fi
+		else
+			ip4_mark_vpn_network || rules_status=1
+		fi
 	fi
 	rm -f "${rules_lock}/pid"
 	rmdir "${rules_lock}" 2>/dev/null

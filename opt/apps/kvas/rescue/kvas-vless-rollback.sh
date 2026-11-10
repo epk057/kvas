@@ -11,9 +11,21 @@ fi
 
 . "${STATE}"
 
-case "${OLD_INFACE_CLI:-}|${OLD_INFACE_ENT:-}|${OLD_ADDR_MAN:-}" in
+case "${OLD_INFACE_CLI:-}" in
+	*[!A-Za-z0-9_.:+/-]*|"")
+		echo "Состояние rollback содержит недопустимый CLI-интерфейс" >&2
+		exit 1
+	;;
+esac
+case "${OLD_INFACE_ENT:-}" in
+	*[!A-Za-z0-9_.:+/-]*|"")
+		echo "Состояние rollback содержит недопустимый Entware-интерфейс" >&2
+		exit 1
+	;;
+esac
+case "${OLD_ADDR_MAN:-}" in
 	*[!A-Za-z0-9_.:+/-]*)
-		echo "Состояние rollback содержит недопустимые символы" >&2
+		echo "Состояние rollback содержит недопустимый ADDR_MAN" >&2
 		exit 1
 	;;
 esac

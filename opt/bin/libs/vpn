@@ -132,6 +132,23 @@ vless_fail_closed() {
 		/opt/sbin/ip route del default dev "${failed_ent}" table 1001 >/dev/null 2>&1 || true
 	fi
 	/opt/sbin/ip rule del priority 99 >/dev/null 2>&1 || true
+	# ndm_interface_change записывает Proxy21 в kvas.conf до запуска Xray.
+	# При раннем отказе нельзя оставлять это имя выбранным: cmd_vpn_status
+	# иначе показывает ложное активное VLESS-соединение.
+	if [ "$(get_config_value INFACE_CLI 2>/dev/null || true)" = "${PROXY_VLESS_NAME}" ]; then
+		if [ -r "${VLESS_ROLLBACK_STATE}" ]; then
+			. "${VLESS_ROLLBACK_STATE}"
+			set_config_value INFACE_ENT "${OLD_INFACE_ENT:-}"
+			set_config_value INFACE_CLI "${OLD_INFACE_CLI:-}"
+			set_config_value ADDR_MAN "${OLD_ADDR_MAN:-}"
+			log_info "VLESS: восстановлено выбранное состояние ${OLD_INFACE_CLI:-предыдущий интерфейс}"
+		else
+			set_config_value INFACE_ENT ""
+			set_config_value INFACE_CLI ""
+			set_config_value ADDR_MAN ""
+			log_error 'VLESS: rollback state отсутствует, выбранный интерфейс очищен'
+		fi
+	fi
 	log_error "VLESS: активация остановлена в fail-closed режиме: ${reason}"
 	echo "VLESS не активирован: ${reason}"
 	echo "Автоматический откат не выполнялся. Ручной план: ${VLESS_ROLLBACK_PLAN}"

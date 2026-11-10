@@ -119,6 +119,23 @@ EOF
 	return 0
 }
 
+vless_restore_previous_selection() {
+	local old_cli old_ent old_addr
+	[ -r "${VLESS_ROLLBACK_STATE}" ] || return 1
+	. "${VLESS_ROLLBACK_STATE}"
+	old_cli=${OLD_INFACE_CLI:-}
+	old_ent=${OLD_INFACE_ENT:-}
+	old_addr=${OLD_ADDR_MAN:-}
+	[ -n "${old_cli}" ] && [ -n "${old_ent}" ] || return 1
+	[ "$(get_value_interface_field "${old_cli}" connected 2>/dev/null || true)" = yes ] || return 1
+
+	set_config_value ADDR_MAN "${old_addr}"
+	set_config_value INFACE_ENT "${old_ent}"
+	set_config_value INFACE_CLI "${old_cli}"
+	vpn_on "${old_ent}" || return 1
+	return 0
+}
+
 vless_fail_closed() {
 	local reason="${1:-неизвестная ошибка}"
 	local failed_ent
@@ -136,12 +153,8 @@ vless_fail_closed() {
 	# При раннем отказе нельзя оставлять это имя выбранным: cmd_vpn_status
 	# иначе показывает ложное активное VLESS-соединение.
 	if [ "$(get_config_value INFACE_CLI 2>/dev/null || true)" = "${PROXY_VLESS_NAME}" ]; then
-		if [ -r "${VLESS_ROLLBACK_STATE}" ]; then
-			. "${VLESS_ROLLBACK_STATE}"
-			set_config_value INFACE_ENT "${OLD_INFACE_ENT:-}"
-			set_config_value INFACE_CLI "${OLD_INFACE_CLI:-}"
-			set_config_value ADDR_MAN "${OLD_ADDR_MAN:-}"
-			log_info "VLESS: восстановлено выбранное состояние ${OLD_INFACE_CLI:-предыдущий интерфейс}"
+		if vless_restore_previous_selection; then
+			log_warning "VLESS: восстановлено предыдущее VPN-состояние и маршруты"
 		else
 			set_config_value INFACE_ENT ""
 			set_config_value INFACE_CLI ""

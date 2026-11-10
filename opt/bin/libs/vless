@@ -30,6 +30,24 @@ VLESS_CONFIG_FILE_BACKUP=${KVAS_BACKUP_PATH}/kvas.json
 PROXY_VLESS_DESC="Kvas-proxy-vless"
 PROXY_LOCAL_IP="127.0.0.1"
 PROXY_VLESS_PORT=1097
+
+xray_runtime_ready() {
+#-------------------------------------------------------------------------------
+# Проверяем фактическую готовность Xray, а не только успешный возврат init-скрипта.
+# service_action может завершиться успешно до того, как процесс упадёт или
+# начнёт слушать SOCKS-порт.
+#-------------------------------------------------------------------------------
+    local _xray_pid
+
+    _xray_pid=$(pidof xray 2>/dev/null || true)
+    [ -n "${_xray_pid}" ] || return 1
+
+    netstat -ln 2>/dev/null |
+        grep -Eq "[[:space:]]127\\.0\\.0\\.1:${PROXY_VLESS_PORT}[[:space:]]" ||
+        return 1
+
+    return 0
+}
 PROXY_VLESS_PROTO=socks5
 DOMAIN_FOR_CHECK="ifconfig.me"
 
@@ -589,6 +607,15 @@ test_vless_proxy() {
     local _out
     local _socks_out
     local _status=0
+
+    ready "Проверка процесса и порта Xray"
+    if xray_runtime_ready; then
+        when_ok "УСПЕШНО"
+    else
+        when_bad "ОШИБКА"
+        _status=1
+        log_error "VLESS: процесс Xray или SOCKS-порт 127.0.0.1:${PROXY_VLESS_PORT} не готовы"
+    fi
 
     # Proxy21 — это Keenetic proxy-интерфейс, а не обычный point-to-point
     # интерфейс. Локальный curl --interface t2s21 не воспроизводит путь LAN

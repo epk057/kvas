@@ -2457,6 +2457,11 @@ start_vless(){
 			vless_fail_closed 'не удалось запустить S97xray'
 			return 1
 		}
+		if ! xray_runtime_ready; then
+			when_bad "ОШИБКА"
+			vless_fail_closed 'S97xray завершился или не открыл SOCKS-порт 1097'
+			return 1
+		fi
 		vpn_on "${_inface_entware}" &> /dev/null || {
 			vless_fail_closed 'не удалось подготовить Proxy21 и правила маршрутизации'
 			return 1
